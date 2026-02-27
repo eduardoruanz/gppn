@@ -1,0 +1,63 @@
+syntax = "proto3";
+package gppn.v1;
+
+// DID method types supported by GPPN.
+enum DidMethod {
+  DID_METHOD_UNSPECIFIED = 0;
+  DID_METHOD_KEY = 1;      // did:gppn:key:<base58_pubkey>
+  DID_METHOD_WEB = 2;      // did:gppn:web:<domain>
+  DID_METHOD_CHAIN = 3;    // did:gppn:chain:<contract_address>
+}
+
+// DID representation.
+message Did {
+  DidMethod method = 1;
+  string identifier = 2;   // Method-specific identifier
+}
+
+// Verification method within a DID Document.
+message VerificationMethod {
+  string id = 1;                    // e.g., "did:gppn:key:z6Mk...#keys-1"
+  string verification_type = 2;    // e.g., "Ed25519VerificationKey2020"
+  string controller = 3;           // DID of the controller
+  bytes public_key_bytes = 4;      // Raw public key bytes
+}
+
+// DID Document — W3C-compatible.
+message DidDocument {
+  string id = 1;                    // The DID URI
+  repeated VerificationMethod verification_methods = 2;
+  repeated string authentication = 3;    // References to verification methods
+  repeated string assertion_method = 4;
+  repeated string key_agreement = 5;
+  repeated Service services = 6;
+  uint64 created = 7;              // Unix millis
+  uint64 updated = 8;              // Unix millis
+}
+
+// Service endpoint in a DID Document.
+message Service {
+  string id = 1;
+  string service_type = 2;   // e.g., "GppnNode", "GppnMessaging"
+  string service_endpoint = 3;
+}
+
+// Verifiable Credential.
+message VerifiableCredential {
+  string id = 1;
+  string issuer_did = 2;
+  string subject_did = 3;
+  string credential_type = 4;      // e.g., "KYCVerification", "BusinessRegistration"
+  bytes credential_data = 5;       // Encrypted credential payload
+  uint64 issued_at = 6;
+  uint64 expires_at = 7;
+  bytes proof = 8;                  // Issuer's signature or ZKP
+}
+
+// Zero-Knowledge compliance proof.
+message ZkComplianceProof {
+  bytes proof = 1;
+  bytes public_inputs = 2;
+  string circuit_id = 3;            // Identifier of the ZK circuit used
+  string verifier_contract = 4;     // Optional: on-chain verifier address
+}

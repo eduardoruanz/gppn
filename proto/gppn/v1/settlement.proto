@@ -1,0 +1,73 @@
+syntax = "proto3";
+package gppn.v1;
+
+import "gppn/v1/payment_message.proto";
+
+// Settlement adapter types.
+enum SettlementType {
+  SETTLEMENT_TYPE_UNSPECIFIED = 0;
+  SETTLEMENT_TYPE_INTERNAL = 1;
+  SETTLEMENT_TYPE_ETHEREUM = 2;
+  SETTLEMENT_TYPE_SOLANA = 3;
+  SETTLEMENT_TYPE_BITCOIN_LIGHTNING = 4;
+  SETTLEMENT_TYPE_STABLECOIN = 5;
+  SETTLEMENT_TYPE_PIX = 6;
+  SETTLEMENT_TYPE_SWIFT = 7;
+  SETTLEMENT_TYPE_CBDC = 8;
+}
+
+// HTLC status.
+enum HtlcStatus {
+  HTLC_STATUS_UNSPECIFIED = 0;
+  HTLC_STATUS_CREATED = 1;
+  HTLC_STATUS_LOCKED = 2;
+  HTLC_STATUS_CLAIMED = 3;
+  HTLC_STATUS_REFUNDED = 4;
+  HTLC_STATUS_EXPIRED = 5;
+}
+
+// Hash Time-Locked Contract parameters.
+message HtlcParams {
+  bytes hash_lock = 1;        // BLAKE3 hash of preimage (32 bytes)
+  uint64 time_lock = 2;      // Unix millis expiry
+  Amount amount = 3;
+  string sender_did = 4;
+  string receiver_did = 5;
+}
+
+// Settlement status.
+enum SettlementStatus {
+  SETTLEMENT_STATUS_UNSPECIFIED = 0;
+  SETTLEMENT_STATUS_INITIATED = 1;
+  SETTLEMENT_STATUS_PENDING = 2;
+  SETTLEMENT_STATUS_CONFIRMED = 3;
+  SETTLEMENT_STATUS_FAILED = 4;
+  SETTLEMENT_STATUS_ROLLED_BACK = 5;
+}
+
+// Settlement request sent to an adapter.
+message SettlementRequest {
+  bytes settlement_id = 1;    // UUID v7
+  PaymentMessage payment_message = 2;
+  repeated RouteHop route = 3;
+  HtlcParams htlc_params = 4;
+}
+
+// A single hop in a settlement route.
+message RouteHop {
+  string peer_id = 1;
+  string did = 2;
+  string adapter_id = 3;
+  Amount fee = 4;
+}
+
+// Settlement receipt — proof of finalized settlement.
+message SettlementReceipt {
+  bytes settlement_id = 1;
+  SettlementType settlement_type = 2;
+  SettlementStatus status = 3;
+  string tx_hash = 4;           // On-chain transaction hash (if applicable)
+  uint64 block_number = 5;      // Block number (if applicable)
+  uint64 confirmed_at = 6;      // Unix millis
+  bytes proof_data = 7;         // Adapter-specific proof
+}

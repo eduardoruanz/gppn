@@ -1,0 +1,30 @@
+[package]
+name = "gppn-node"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "GPPN full node binary"
+
+[[bin]]
+name = "gppn-node"
+path = "src/main.rs"
+
+[dependencies]
+gppn-core = { path = "../gppn-core" }
+gppn-crypto = { path = "../gppn-crypto" }
+gppn-network = { path = "../gppn-network" }
+gppn-routing = { path = "../gppn-routing" }
+gppn-settlement = { path = "../gppn-settlement" }
+gppn-identity = { path = "../gppn-identity" }
+tokio = { workspace = true }
+clap = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+rocksdb = { workspace = true }
+uuid = { workspace = true }
+libp2p = { workspace = true }

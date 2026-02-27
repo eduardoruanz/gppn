@@ -1,0 +1,38 @@
+syntax = "proto3";
+package gppn.v1;
+
+import "gppn/v1/payment_message.proto";
+
+// Information about a GPPN node.
+message NodeInfo {
+  string peer_id = 1;              // libp2p PeerId
+  string did = 2;                  // Node's DID
+  uint32 protocol_version = 3;
+  repeated string listen_addresses = 4;
+  repeated Currency supported_currencies = 5;
+  repeated string settlement_adapters = 6;
+  uint64 uptime_seconds = 7;
+  uint64 started_at = 8;          // Unix millis
+}
+
+// Information about a connected peer.
+message PeerInfo {
+  string peer_id = 1;
+  string did = 2;
+  string address = 3;             // Multiaddr
+  uint64 connected_since = 4;     // Unix millis
+  double trust_score = 5;
+  uint64 latency_ms = 6;
+}
+
+// Network statistics.
+message NetworkStats {
+  uint32 connected_peers = 1;
+  uint64 messages_sent = 2;
+  uint64 messages_received = 3;
+  uint64 payments_routed = 4;
+  uint64 payments_settled = 5;
+  uint64 bytes_sent = 6;
+  uint64 bytes_received = 7;
+  uint32 routing_table_size = 8;
+}

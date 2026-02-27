@@ -1,0 +1,25 @@
+# GPPN Settlement Adapter: Ethereum — Multi-stage Docker Build
+FROM golang:1.22-bookworm AS builder
+
+WORKDIR /build
+
+COPY services/sa-ethereum/ .
+
+RUN go mod download
+RUN CGO_ENABLED=0 go build -o sa-ethereum .
+
+# Runtime image
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash gppn
+
+COPY --from=builder /build/sa-ethereum /usr/local/bin/sa-ethereum
+
+USER gppn
+
+EXPOSE 50051
+EXPOSE 9003
+
+ENTRYPOINT ["sa-ethereum"]

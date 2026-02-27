@@ -1,0 +1,98 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gppn-core",
+    "crates/gppn-crypto",
+    "crates/gppn-network",
+    "crates/gppn-routing",
+    "crates/gppn-settlement",
+    "crates/gppn-identity",
+    "crates/gppn-node",
+    "crates/gppn-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["GPPN Foundation <dev@gppn.network>"]
+license = "Apache-2.0"
+repository = "https://github.com/gppn-protocol/gppn"
+description = "Global Payment Protocol Network — The universal language of money"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Protobuf
+prost = "0.13"
+prost-types = "0.13"
+prost-build = "0.13"
+
+# Networking
+libp2p = { version = "0.54", features = [
+    "tokio",
+    "gossipsub",
+    "mdns",
+    "noise",
+    "tcp",
+    "yamux",
+    "identify",
+    "kad",
+    "macros",
+    "request-response",
+    "cbor",
+    "serde",
+] }
+
+# Cryptography
+ed25519-dalek = { version = "2", features = ["serde", "rand_core"] }
+x25519-dalek = { version = "2", features = ["serde", "static_secrets"] }
+chacha20poly1305 = "0.10"
+blake3 = "1"
+argon2 = "0.5"
+rand = "0.8"
+
+# Storage
+rocksdb = "0.22"
+
+# Concurrency
+dashmap = "6"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging / Tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1", features = ["v7", "serde"] }
+
+# Encoding
+hex = "0.4"
+base64 = "0.22"
+bs58 = "0.5"
+bytes = "1"
+
+# Async trait
+async-trait = "0.1"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Config
+toml = "0.8"
+
+# Zeroize
+zeroize = { version = "1", features = ["derive"] }
+
+# Futures
+futures = "0.3"

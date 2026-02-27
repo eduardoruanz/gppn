@@ -1,0 +1,96 @@
+version: "3.8"
+
+services:
+  # GPPN Node 1 (bootstrap node)
+  node1:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.node
+    container_name: gppn-node1
+    command: ["--port", "9000", "--api-port", "9001", "--log-level", "info"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+      - "9002:9002"
+    volumes:
+      - node1-data:/home/gppn/data
+    networks:
+      - gppn-net
+
+  # GPPN Node 2
+  node2:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.node
+    container_name: gppn-node2
+    command: ["--port", "9000", "--api-port", "9001", "--log-level", "info"]
+    ports:
+      - "9010:9000"
+      - "9011:9001"
+      - "9012:9002"
+    volumes:
+      - node2-data:/home/gppn/data
+    depends_on:
+      - node1
+    networks:
+      - gppn-net
+
+  # GPPN Node 3
+  node3:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.node
+    container_name: gppn-node3
+    command: ["--port", "9000", "--api-port", "9001", "--log-level", "info"]
+    ports:
+      - "9020:9000"
+      - "9021:9001"
+      - "9022:9002"
+    volumes:
+      - node3-data:/home/gppn/data
+    depends_on:
+      - node1
+    networks:
+      - gppn-net
+
+  # PostgreSQL for explorer and settlement adapters
+  postgres:
+    image: postgres:16-alpine
+    container_name: gppn-postgres
+    environment:
+      POSTGRES_USER: gppn
+      POSTGRES_PASSWORD: gppn_dev
+      POSTGRES_DB: gppn
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - gppn-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gppn"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # DragonflyDB (Redis-compatible) for caching
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    container_name: gppn-dragonfly
+    ports:
+      - "6379:6379"
+    volumes:
+      - dragonfly-data:/data
+    networks:
+      - gppn-net
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
+  postgres-data:
+  dragonfly-data:
+
+networks:
+  gppn-net:
+    driver: bridge

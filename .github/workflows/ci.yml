@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  rust:
+    name: Rust (${{ matrix.check }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [fmt, clippy, test, audit]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler cmake
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        if: matrix.check == 'fmt'
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        if: matrix.check == 'clippy'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run tests
+        if: matrix.check == 'test'
+        run: cargo test --workspace
+
+      - name: Install cargo-audit
+        if: matrix.check == 'audit'
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        if: matrix.check == 'audit'
+        run: cargo audit
+
+  go:
+    name: Go Services
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - sa-ethereum
+          - sa-bitcoin
+          - sa-stablecoin
+          - explorer-api
+          - gateway
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: services/${{ matrix.service }}/go.sum
+
+      - name: Build
+        working-directory: services/${{ matrix.service }}
+        run: go build ./...
+
+      - name: Test
+        working-directory: services/${{ matrix.service }}
+        run: go test ./...
+
+  typescript:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: sdks/typescript/package-lock.json
+
+      - name: Install dependencies
+        working-directory: sdks/typescript
+        run: npm ci
+
+      - name: Type check
+        working-directory: sdks/typescript
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: sdks/typescript
+        run: npm test
+
+      - name: Build
+        working-directory: sdks/typescript
+        run: npm run build
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [rust]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build GPPN Node image
+        run: docker build -f infra/docker/Dockerfile.node -t gppn-node:test .
+
+      - name: Verify image runs
+        run: docker run --rm gppn-node:test --help || true

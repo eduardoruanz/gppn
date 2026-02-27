@@ -1,0 +1,20 @@
+[package]
+name = "gppn-routing"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "GPPN PathFinder routing algorithm and Distributed Routing Table"
+
+[dependencies]
+gppn-core = { path = "../gppn-core" }
+dashmap = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

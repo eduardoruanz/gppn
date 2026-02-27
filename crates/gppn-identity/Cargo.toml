@@ -1,0 +1,25 @@
+[package]
+name = "gppn-identity"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "GPPN identity layer: DIDs, Verifiable Credentials, TrustGraph"
+
+[dependencies]
+gppn-core = { path = "../gppn-core" }
+gppn-crypto = { path = "../gppn-crypto" }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+dashmap = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+bs58 = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
