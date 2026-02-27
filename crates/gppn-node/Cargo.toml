@@ -28,3 +28,4 @@ anyhow = { workspace = true }
 rocksdb = { workspace = true }
 uuid = { workspace = true }
 libp2p = { workspace = true }
+axum = { workspace = true }

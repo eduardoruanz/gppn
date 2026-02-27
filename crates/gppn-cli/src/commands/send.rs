@@ -1,12 +1,13 @@
 //! `gppn send` — Send a payment via the GPPN network.
 
 use clap::Args;
+use serde::{Deserialize, Serialize};
 
 #[derive(Args, Debug)]
 pub struct SendArgs {
-    /// Recipient DID (e.g., did:gppn:key:abc123).
-    #[arg(short, long)]
-    pub to: String,
+    /// Recipient peer ID or DID.
+    #[arg(short = 'r', long)]
+    pub recipient: String,
 
     /// Amount to send (in atomic units).
     #[arg(short, long)]
@@ -21,18 +22,65 @@ pub struct SendArgs {
     pub endpoint: String,
 }
 
-pub fn run(args: &SendArgs) -> anyhow::Result<()> {
+#[derive(Serialize)]
+struct SendPaymentRequest {
+    recipient: String,
+    amount: u64,
+    currency: String,
+}
+
+#[derive(Deserialize)]
+struct SendPaymentResponse {
+    pm_id: String,
+    status: String,
+    message: String,
+}
+
+#[derive(Deserialize)]
+struct ErrorResponse {
+    error: String,
+}
+
+pub async fn run(args: &SendArgs) -> anyhow::Result<()> {
+    let url = format!("{}/api/v1/payments", args.endpoint);
+    let body = SendPaymentRequest {
+        recipient: args.recipient.clone(),
+        amount: args.amount,
+        currency: args.currency.clone(),
+    };
+
     println!("Sending payment...");
-    println!("  To:       {}", args.to);
+    println!("  To:       {}", args.recipient);
     println!("  Amount:   {} {}", args.amount, args.currency);
     println!("  Via:      {}", args.endpoint);
     println!();
 
-    // In a real implementation, this would:
-    // 1. Connect to the node's JSON-RPC API
-    // 2. Create a PaymentMessage
-    // 3. Submit it and wait for routing + settlement
-    println!("Payment submitted. (stub — connect a running node for real transactions)");
+    let client = reqwest::Client::new();
+    let resp = client.post(&url).json(&body).send().await;
+
+    match resp {
+        Ok(r) if r.status().is_success() => {
+            let data: SendPaymentResponse = r.json().await?;
+            println!("Payment dispatched!");
+            println!("  PM ID:    {}", data.pm_id);
+            println!("  Status:   {}", data.status);
+            println!("  Message:  {}", data.message);
+        }
+        Ok(r) => {
+            let status = r.status();
+            if let Ok(err) = r.json::<ErrorResponse>().await {
+                anyhow::bail!("payment failed (HTTP {}): {}", status, err.error);
+            } else {
+                anyhow::bail!("payment failed (HTTP {})", status);
+            }
+        }
+        Err(e) => {
+            println!("Could not reach node at {}", args.endpoint);
+            println!("  Error: {}", e);
+            println!();
+            println!("Is the node running? Start it with: gppn-node");
+        }
+    }
 
     Ok(())
 }

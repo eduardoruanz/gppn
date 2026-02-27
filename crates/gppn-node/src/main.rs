@@ -2,8 +2,11 @@
 //!
 //! Starts the GPPN full node with configuration from a TOML file or defaults.
 
+mod api;
+mod commands;
 mod config;
 mod node;
+mod state;
 mod storage;
 
 use clap::Parser;

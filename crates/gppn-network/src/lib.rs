@@ -44,7 +44,7 @@ pub use protocol::{GppnCodec, GppnRequest, GppnResponse, GPPN_PROTOCOL};
 pub use behaviour::{GppnBehaviour, GppnBehaviourEvent};
 pub use gossip::TopicManager;
 pub use discovery::PeerDiscovery;
-pub use node::{GppnNode, NodeConfig};
+pub use node::{GppnNode, NetworkCommand, NodeConfig};
 
 // Re-export commonly used libp2p types for downstream convenience.
 pub use libp2p::{identity::Keypair, Multiaddr, PeerId};

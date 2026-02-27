@@ -10,7 +10,7 @@ use libp2p::swarm::SwarmEvent;
 use libp2p::{gossipsub, identify, kad, mdns, Multiaddr, PeerId, Swarm};
 use std::collections::HashSet;
 use std::str::FromStr;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::behaviour::{GppnBehaviour, GppnBehaviourEvent};
 use crate::discovery::PeerDiscovery;
@@ -43,6 +43,21 @@ impl Default for NodeConfig {
     }
 }
 
+/// Commands that can be sent to the network event loop from external tasks.
+pub enum NetworkCommand {
+    /// Broadcast a payment message via gossipsub.
+    BroadcastPayment {
+        data: Vec<u8>,
+        reply: oneshot::Sender<Result<(), NetworkError>>,
+    },
+    /// Send a direct request to a specific peer.
+    SendDirectRequest {
+        peer_id: PeerId,
+        data: Vec<u8>,
+        reply: oneshot::Sender<Result<(), NetworkError>>,
+    },
+}
+
 /// The GPPN P2P network node.
 ///
 /// Manages the libp2p swarm, topic subscriptions, peer discovery,
@@ -66,6 +81,10 @@ pub struct GppnNode {
     shutdown_tx: Option<mpsc::Sender<()>>,
     /// Connected peers tracking.
     connected_peers: HashSet<PeerId>,
+    /// Command sender (cloneable, handed out via `command_sender()`).
+    command_tx: mpsc::Sender<NetworkCommand>,
+    /// Command receiver for external tasks to request actions on the swarm.
+    command_rx: Option<mpsc::Receiver<NetworkCommand>>,
 }
 
 impl GppnNode {
@@ -75,6 +94,7 @@ impl GppnNode {
         let topic_manager = TopicManager::new();
         let discovery = PeerDiscovery::new(config.bootstrap_peers.clone())?;
         let (event_tx, _) = broadcast::channel(config.event_channel_capacity);
+        let (command_tx, command_rx) = mpsc::channel(256);
 
         tracing::info!(%local_peer_id, "creating GPPN node");
 
@@ -88,6 +108,8 @@ impl GppnNode {
             event_tx,
             shutdown_tx: None,
             connected_peers: HashSet::new(),
+            command_tx,
+            command_rx: Some(command_rx),
         })
     }
 
@@ -124,6 +146,12 @@ impl GppnNode {
     /// Check if the node's swarm has been started.
     pub fn is_running(&self) -> bool {
         self.swarm.is_some()
+    }
+
+    /// Get a command sender that can be used from other tasks to
+    /// request actions on the swarm (e.g., broadcasting a payment).
+    pub fn command_sender(&self) -> mpsc::Sender<NetworkCommand> {
+        self.command_tx.clone()
     }
 
     /// Start the node: build the swarm, listen on the configured address,
@@ -184,8 +212,8 @@ impl GppnNode {
 
     /// Run the event loop. This should be called in a tokio::spawn after start().
     ///
-    /// Processes incoming swarm events and emits high-level NetworkEvents.
-    /// Returns when the shutdown signal is received.
+    /// Processes incoming swarm events, external commands, and emits high-level NetworkEvents.
+    /// Returns when the shutdown signal is received or the command channel closes.
     pub async fn run(&mut self) -> Result<(), NetworkError> {
         if self.swarm.is_none() {
             return Err(NetworkError::NotStarted);
@@ -194,26 +222,43 @@ impl GppnNode {
         let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
         self.shutdown_tx = Some(shutdown_tx);
 
+        let mut command_rx = self.command_rx.take()
+            .ok_or(NetworkError::NotStarted)?;
+
         tracing::info!(peer_id = %self.local_peer_id, "GPPN node event loop started");
 
+        enum Action {
+            SwarmEvent(SwarmEvent<GppnBehaviourEvent>),
+            Command(NetworkCommand),
+            Shutdown,
+            CommandChannelClosed,
+        }
+
         loop {
-            // We must scope the swarm borrow so it doesn't live across the
-            // call to handle_swarm_event (which also borrows &mut self).
-            let maybe_event = {
+            let action = {
                 let swarm = match self.swarm.as_mut() {
                     Some(s) => s,
                     None => break,
                 };
                 tokio::select! {
-                    event = swarm.select_next_some() => Some(event),
-                    _ = shutdown_rx.recv() => None,
+                    event = swarm.select_next_some() => Action::SwarmEvent(event),
+                    cmd = command_rx.recv() => match cmd {
+                        Some(c) => Action::Command(c),
+                        None => Action::CommandChannelClosed,
+                    },
+                    _ = shutdown_rx.recv() => Action::Shutdown,
                 }
             };
 
-            match maybe_event {
-                Some(event) => self.handle_swarm_event(event),
-                None => {
-                    tracing::info!("GPPN node shutting down");
+            match action {
+                Action::SwarmEvent(event) => self.handle_swarm_event(event),
+                Action::Command(cmd) => self.handle_command(cmd),
+                Action::Shutdown => {
+                    tracing::info!("GPPN node shutting down (signal)");
+                    break;
+                }
+                Action::CommandChannelClosed => {
+                    tracing::info!("GPPN node shutting down (command channel closed)");
                     break;
                 }
             }
@@ -279,6 +324,21 @@ impl GppnNode {
             .send_request(peer_id, request);
 
         Ok(request_id)
+    }
+
+    /// Handle a command from an external task (e.g., HTTP API).
+    fn handle_command(&mut self, cmd: NetworkCommand) {
+        match cmd {
+            NetworkCommand::BroadcastPayment { data, reply } => {
+                let result = self.broadcast_pm(data);
+                let _ = reply.send(result);
+            }
+            NetworkCommand::SendDirectRequest { peer_id, data, reply } => {
+                let request = crate::protocol::GppnRequest::PaymentMessage { data };
+                let result = self.send_request(&peer_id, request).map(|_| ());
+                let _ = reply.send(result);
+            }
+        }
     }
 
     /// Handle a swarm event dispatched from the event loop.

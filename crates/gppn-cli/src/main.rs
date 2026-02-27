@@ -28,14 +28,15 @@ enum Commands {
     Peers(commands::peers::PeersArgs),
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
         Commands::Init(args) => commands::init::run(args),
         Commands::Start(args) => commands::start::run(args),
-        Commands::Status(args) => commands::status::run(args),
-        Commands::Send(args) => commands::send::run(args),
-        Commands::Peers(args) => commands::peers::run(args),
+        Commands::Status(args) => commands::status::run(args).await,
+        Commands::Send(args) => commands::send::run(args).await,
+        Commands::Peers(args) => commands::peers::run(args).await,
     }
 }
