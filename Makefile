@@ -34,12 +34,11 @@ check:
 # Generate protobuf code (handled by build.rs, this is for manual regeneration)
 proto-gen:
 	@echo "Protobuf code is generated automatically by build.rs during cargo build"
-	cargo build -p gppn-core
+	cargo build -p veritas-core
 
 # Build Docker images
 docker-build:
-	docker build -f infra/docker/Dockerfile.node -t gppn-node .
-	docker build -f infra/docker/Dockerfile.sa-ethereum -t gppn-sa-ethereum services/sa-ethereum/
+	docker build -f infra/docker/Dockerfile.node -t veritas-node .
 
 # Start local testnet with 3 nodes
 testnet-local:
@@ -60,16 +59,16 @@ sdk-ts:
 
 # Build Go services
 go-build:
-	@for dir in services/sa-ethereum services/sa-bitcoin services/sa-stablecoin services/explorer-api services/gateway; do \
+	@for dir in services/issuer-api services/verifier-api services/registry-api services/gateway; do \
 		echo "Building $$dir..."; \
 		cd $$dir && go build ./... && cd -; \
 	done
 
-# Run Go tests
-go-test:
-	@for dir in services/sa-ethereum services/sa-bitcoin services/sa-stablecoin services/explorer-api services/gateway; do \
-		echo "Testing $$dir..."; \
-		cd $$dir && go test ./... && cd -; \
+# Run Go vet on services
+go-vet:
+	@for dir in services/issuer-api services/verifier-api services/registry-api services/gateway; do \
+		echo "Vetting $$dir..."; \
+		cd $$dir && go vet ./... && cd -; \
 	done
 
 # Full CI pipeline

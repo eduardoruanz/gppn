@@ -1,11 +1,11 @@
-# Contributing to GPPN
+# Contributing to Veritas
 
 Thank you for your interest in contributing to the Global Payment Protocol Network!
 
 ## Development Setup
 
 1. **Install toolchain**: Rust 1.75+, Go 1.21+, protoc, Node.js 18+
-2. **Clone the repository**: `git clone https://github.com/gppn-protocol/gppn.git`
+2. **Clone the repository**: `git clone https://github.com/veritas-protocol/veritas.git`
 3. **Build**: `cargo build --workspace`
 4. **Test**: `cargo test --workspace`
 
@@ -37,7 +37,7 @@ Thank you for your interest in contributing to the Global Payment Protocol Netwo
 
 ## Architecture Decisions
 
-Major changes to the protocol or architecture should be proposed as a GIP (GPPN Improvement Proposal) in `spec/gips/`.
+Major changes to the protocol or architecture should be proposed as a VIP (Veritas Improvement Proposal) in `spec/vips/`.
 
 ## License
 

@@ -1,53 +1,60 @@
 /**
- * Error classes for the GPPN SDK.
+ * Error classes for the Veritas SDK.
  */
 
-/** Base error class for all GPPN errors. */
-export class GppnError extends Error {
+/** Base error class for all Veritas errors. */
+export class VeritasError extends Error {
   /** A machine-readable error code. */
   public readonly code: string;
 
-  constructor(message: string, code: string = "GPPN_ERROR") {
+  constructor(message: string, code: string = "VERITAS_ERROR") {
     super(message);
-    this.name = "GppnError";
+    this.name = "VeritasError";
     this.code = code;
-    // Restore prototype chain for proper instanceof checks
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 /** Error thrown when a network connection fails. */
-export class ConnectionError extends GppnError {
+export class ConnectionError extends VeritasError {
   constructor(message: string) {
     super(message, "CONNECTION_ERROR");
     this.name = "ConnectionError";
   }
 }
 
-/** Error thrown when a payment operation fails. */
-export class PaymentError extends GppnError {
-  /** The payment ID associated with the error, if available. */
-  public readonly paymentId?: string;
+/** Error thrown when a credential operation fails. */
+export class CredentialError extends VeritasError {
+  /** The credential ID associated with the error, if available. */
+  public readonly credentialId?: string;
 
-  constructor(message: string, paymentId?: string) {
-    super(message, "PAYMENT_ERROR");
-    this.name = "PaymentError";
-    this.paymentId = paymentId;
+  constructor(message: string, credentialId?: string) {
+    super(message, "CREDENTIAL_ERROR");
+    this.name = "CredentialError";
+    this.credentialId = credentialId;
   }
 }
 
-/** Error thrown when route finding or selection fails. */
-export class RoutingError extends GppnError {
+/** Error thrown when a zero-knowledge proof operation fails. */
+export class ProofError extends VeritasError {
   constructor(message: string) {
-    super(message, "ROUTING_ERROR");
-    this.name = "RoutingError";
+    super(message, "PROOF_ERROR");
+    this.name = "ProofError";
   }
 }
 
 /** Error thrown when identity operations fail. */
-export class IdentityError extends GppnError {
+export class IdentityError extends VeritasError {
   constructor(message: string) {
     super(message, "IDENTITY_ERROR");
     this.name = "IdentityError";
+  }
+}
+
+/** Error thrown when credential verification fails. */
+export class VerificationError extends VeritasError {
+  constructor(message: string) {
+    super(message, "VERIFICATION_ERROR");
+    this.name = "VerificationError";
   }
 }

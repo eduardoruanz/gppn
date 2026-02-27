@@ -30,14 +30,14 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Build and push GPPN Node
+      - name: Build and push Veritas Node
         uses: docker/build-push-action@v5
         with:
           context: .
           file: infra/docker/Dockerfile.node
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/gppn-node:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository }}/gppn-node:latest
+            ghcr.io/${{ github.repository }}/veritas-node:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}/veritas-node:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

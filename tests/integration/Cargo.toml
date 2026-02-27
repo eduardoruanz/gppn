@@ -1,0 +1,20 @@
+[package]
+name = "veritas-integration-tests"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+# This crate has no library — only integration tests in tests/
+[lib]
+name = "veritas_integration_tests"
+path = "src/lib.rs"
+
+[dependencies]
+veritas-core = { path = "../../crates/veritas-core" }
+veritas-crypto = { path = "../../crates/veritas-crypto" }
+veritas-identity = { path = "../../crates/veritas-identity" }
+veritas-credentials = { path = "../../crates/veritas-credentials" }
+veritas-proof = { path = "../../crates/veritas-proof" }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }

@@ -1,23 +1,24 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/gppn-core",
-    "crates/gppn-crypto",
-    "crates/gppn-network",
-    "crates/gppn-routing",
-    "crates/gppn-settlement",
-    "crates/gppn-identity",
-    "crates/gppn-node",
-    "crates/gppn-cli",
+    "crates/veritas-core",
+    "crates/veritas-crypto",
+    "crates/veritas-network",
+    "crates/veritas-credentials",
+    "crates/veritas-proof",
+    "crates/veritas-identity",
+    "crates/veritas-node",
+    "crates/veritas-cli",
+    "tests/integration",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["GPPN Foundation <dev@gppn.network>"]
+authors = ["Veritas Foundation <dev@veritas.network>"]
 license = "Apache-2.0"
-repository = "https://github.com/gppn-protocol/gppn"
-description = "Global Payment Protocol Network — The universal language of money"
+repository = "https://github.com/veritas-protocol/veritas"
+description = "Veritas — Decentralized identity protocol with AI-resistant proof of humanity"
 
 [workspace.dependencies]
 # Async runtime

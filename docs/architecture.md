@@ -1,129 +1,107 @@
-# GPPN Architecture Overview
+# Veritas Architecture Overview
 
 ## Protocol Layers
 
-GPPN implements a 5-layer architecture inspired by the OSI model, specialized for payment processing:
+Veritas implements a 4-layer architecture for decentralized identity:
 
 ### Layer 1: OGL — Overlay & Gossip Layer
 
-**Crate**: `gppn-network`
+**Crate**: `veritas-network`
 
 The foundation layer handles peer-to-peer networking using libp2p:
 
 - **Transport**: TCP + Noise encryption + Yamux multiplexing
 - **Discovery**: Kademlia DHT for peer discovery, mDNS for local networks
-- **Messaging**: GossipSub for broadcast (route advertisements, payment announcements)
+- **Messaging**: GossipSub for broadcast (credential announcements, proof requests)
 - **Direct**: Request-response protocol with CBOR serialization for peer-to-peer messages
 
 Key components:
-- `GppnNode` — manages the libp2p swarm and event loop
-- `GppnBehaviour` — composed libp2p behaviour (gossipsub + Kademlia + mDNS + identify + request-response)
-- `TopicManager` — GossipSub topic management for `/gppn/payments/1.0.0` and `/gppn/routing/1.0.0`
+- `VeritasNode` — manages the libp2p swarm and event loop
+- `VeritasBehaviour` — composed libp2p behaviour (gossipsub + Kademlia + mDNS + identify + request-response)
+- `TopicManager` — GossipSub topic management for `/veritas/credentials/v1` and `/veritas/proof-requests/v1`
 
 ### Layer 2: TIL — Trust & Identity Layer
 
-**Crate**: `gppn-identity`
+**Crate**: `veritas-identity`
 
 Decentralized identity and trust scoring:
 
-- **DIDs**: W3C-compatible Decentralized Identifiers (`did:gppn:<method>:<id>`)
+- **DIDs**: W3C-compatible Decentralized Identifiers (`did:veritas:<method>:<id>`)
 - **DID Documents**: Public keys, service endpoints, authentication methods
-- **Verifiable Credentials**: Issuer-signed attestations about peers
+- **Verifiable Credentials**: Issuer-signed attestations about subjects
 - **Trust Graph**: Directed weighted graph with EigenTrust-inspired iterative scoring
-- **Trust Score**: Weighted composite of uptime (20%), success rate (25%), latency (15%), volume (15%), age (10%), attestations (15%)
+- **Humanity Verification**: Multi-signal proof of humanity (social vouching, trusted issuers, cross-platform)
 
-### Layer 3: SRL — Smart Routing Layer
+### Layer 3: ZPL — Zero-Knowledge Proof Layer
 
-**Crate**: `gppn-routing`
+**Crates**: `veritas-proof`, `veritas-crypto`
 
-Distributed payment routing:
+Privacy-preserving proofs using BLAKE3 commitments and Sigma protocols:
 
-- **DRT (Distributed Routing Table)**: Lock-free concurrent routing table backed by `DashMap`
-- **Route Entries**: Next hop, destination, supported currencies, liquidity, fee rate, latency, trust score, TTL
-- **PathFinder**: 3-phase algorithm:
-  1. **Discovery**: Broadcast Route Requests (RReq)
-  2. **Evaluation**: Score Route Responses (RRes) using composite scoring
-  3. **Selection**: Modified Dijkstra + Yen's k-shortest paths
-- **Scoring**: `RouteScore = α×(1/Cost) + β×(1/Latency) + γ×TrustScore + δ×Liquidity`
+- **Age Proofs**: Prove age >= threshold without revealing date of birth
+- **Residency Proofs**: Prove country membership via Merkle set proof
+- **KYC Level Proofs**: Prove KYC level >= required without revealing exact level
+- **Humanity Proofs**: Composite bundle of multiple proof types + social attestations
+- **Selective Disclosure**: Reveal only chosen claims from a credential
 
-### Layer 4: SAL — Settlement Abstraction Layer
+### Layer 4: VCL — Verifiable Credential Layer
 
-**Crate**: `gppn-settlement`, Go services
+**Crate**: `veritas-credentials`
 
-Pluggable settlement with blockchain adapters:
+Complete credential lifecycle management:
 
-- **ISettlement trait**: Async interface for all settlement adapters (initiate, confirm, rollback, get_status, estimate_cost)
-- **HTLC Engine**: Hash Time-Locked Contracts for atomic multi-hop settlement with cascading timeouts
-- **Settlement Manager**: Adapter registry and orchestration
-- **Adapters**:
-  - `SA-Internal` (Rust): Off-chain double-entry ledger — zero cost, zero latency
-  - `SA-Ethereum` (Go): Ethereum L1 settlement
-  - `SA-Bitcoin` (Go): Bitcoin on-chain settlement
-  - `SA-Stablecoin` (Go): USDC/USDT/DAI settlement
-
-### Layer 5: PML — Payment Message Layer
-
-**Crate**: `gppn-core`
-
-The core payment message format and lifecycle:
-
-- **PaymentMessage**: UUID v7 ID, sender/receiver DIDs, amount, currency, conditions, encrypted metadata, Ed25519 signature, routing hints
-- **State Machine**: 8-state FSM with strict transition rules:
-  ```
-  Created → Routed → Accepted → Settling → Settled
-                                         → Failed → (re-route)
-  Created/Routed/Accepted → Expired
-  Created/Routed/Accepted → Cancelled
-  ```
-- **Protobuf**: All message types defined in `proto/gppn/v1/` as the source of truth
+- **SchemaRegistry**: Define and validate credential schemas (KYC, age verification, residency)
+- **CredentialIssuer**: Sign and issue W3C-compatible verifiable credentials
+- **CredentialWallet**: Store, list, and present credentials
+- **CredentialVerifier**: Verify signatures, check expiration, validate issuer trust
+- **VerifiablePresentation**: Bundle credentials for selective presentation
 
 ## Cryptography
 
-**Crate**: `gppn-crypto`
+**Crate**: `veritas-crypto`
 
-- **Signing**: Ed25519 (ed25519-dalek v2) for payment message signatures
+- **Signing**: Ed25519 (ed25519-dalek v2) for credential and message signatures
 - **Key Exchange**: X25519 Diffie-Hellman for shared secret derivation
-- **Encryption**: ChaCha20-Poly1305 AEAD for payment metadata encryption
-- **Hashing**: BLAKE3 for fast, secure content hashing and Merkle roots
+- **Encryption**: ChaCha20-Poly1305 AEAD for encrypted metadata
+- **Hashing**: BLAKE3 for commitments, content addressing, and Merkle proofs
 - **KDF**: Argon2id for key derivation from passwords
+- **ZKP**: BLAKE3 commitment schemes with Fiat-Shamir Sigma protocol proofs
 - **Memory Safety**: `zeroize` crate for private key material cleanup on drop
 
 ## Node Architecture
 
-**Crate**: `gppn-node`
+**Crate**: `veritas-node`
 
 The full node binary orchestrates all layers:
 
 ```
 ┌─────────────────────────────────┐
-│           gppn-node             │
+│          veritas-node           │
 ├─────────────────────────────────┤
-│  JSON-RPC API (port 9001)       │
+│  REST API (port 9001)           │
 │  Prometheus metrics (port 9002) │
 ├─────────────────────────────────┤
-│  PaymentMessage Layer (PML)     │
-│  Smart Routing Layer (SRL)      │
-│  Settlement Layer (SAL)         │
-│  Trust & Identity Layer (TIL)   │
-│  Overlay & Gossip Layer (OGL)   │
+│  Verifiable Credential Layer    │
+│  Zero-Knowledge Proof Layer     │
+│  Trust & Identity Layer         │
+│  Overlay & Gossip Layer         │
 ├─────────────────────────────────┤
 │  RocksDB Storage                │
-│  (payments|routing|identity|    │
-│   state|peers)                  │
+│  (credentials|schemas|proofs|   │
+│   identity|state|peers)         │
 └─────────────────────────────────┘
 ```
 
-Init sequence: keypair → storage (RocksDB) → identity → network → routing → settlement → API → metrics → event loop
+Init sequence: keypair → storage (RocksDB) → identity (DID) → network → credentials → proofs → API → metrics → event loop
 
-## Data Flow: Sending a Payment
+## Data Flow: Verifying Identity
 
-1. **Client** calls `sendPayment()` via SDK or CLI
-2. **PML** creates a `PaymentMessage` (state: Created), signs with Ed25519
-3. **SRL** discovers routes via PathFinder (broadcast RReq, collect RRes, score, select)
-4. **PML** transitions to Routed, sets routing hints
-5. **OGL** sends payment message to next hop via request-response
-6. Intermediate nodes forward along the route
-7. **Receiver** accepts → PML transitions to Accepted
-8. **SAL** initiates settlement via appropriate adapter (HTLC for multi-hop)
-9. Settlement confirms → PML transitions to Settled
-10. HTLC claims propagate back along the route
+1. **Issuer** creates a verifiable credential for a subject (e.g., KYC Basic with name, DOB, country)
+2. **Holder** stores the credential in their wallet
+3. **Verifier** requests proof: "prove age >= 18 and resident of US or BR"
+4. **Holder** generates zero-knowledge proofs from their credential claims:
+   - Age proof: BLAKE3 commitment of DOB + Sigma protocol range proof
+   - Residency proof: Merkle set membership proof against allowed countries
+5. **Verifier** checks the proofs cryptographically — no personal data revealed
+6. **Verifier** attests trust in the holder via the trust graph
+7. Trust scores propagate through the network via EigenTrust

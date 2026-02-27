@@ -1,0 +1,56 @@
+syntax = "proto3";
+package veritas.v1;
+
+enum ProofType {
+  PROOF_TYPE_UNSPECIFIED = 0;
+  PROOF_TYPE_AGE_THRESHOLD = 1;
+  PROOF_TYPE_RESIDENCY = 2;
+  PROOF_TYPE_KYC_LEVEL = 3;
+  PROOF_TYPE_BALANCE_THRESHOLD = 4;
+  PROOF_TYPE_MEMBERSHIP = 5;
+  PROOF_TYPE_HUMANITY = 6;
+  PROOF_TYPE_CUSTOM = 99;
+}
+
+message ProofRequest {
+  string id = 1;
+  string verifier_did = 2;
+  repeated ProofRequirement requirements = 3;
+  string challenge = 4;
+  string domain = 5;
+  uint64 expires_at = 6;
+}
+
+message ProofRequirement {
+  ProofType proof_type = 1;
+  map<string, string> params = 2;
+  repeated string accepted_issuers = 3;
+  bool required = 4;
+}
+
+message ProofResponse {
+  string request_id = 1;
+  string holder_did = 2;
+  repeated ProofResult results = 3;
+  uint64 created_at = 4;
+  bytes holder_signature = 5;
+}
+
+message ProofResult {
+  ProofType proof_type = 1;
+  bool satisfied = 2;
+  bytes proof_data = 3;
+  bytes public_inputs = 4;
+  string credential_id = 5;
+  string issuer_did = 6;
+}
+
+message HumanityProof {
+  string subject_did = 1;
+  string verification_method = 2;
+  double confidence = 3;
+  uint64 verified_at = 4;
+  uint64 expires_at = 5;
+  bytes proof_data = 6;
+  uint32 attestation_count = 7;
+}

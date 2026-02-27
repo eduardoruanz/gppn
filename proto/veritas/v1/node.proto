@@ -1,0 +1,33 @@
+syntax = "proto3";
+package veritas.v1;
+
+message NodeInfo {
+  string peer_id = 1;
+  string did = 2;
+  uint32 protocol_version = 3;
+  repeated string listen_addresses = 4;
+  repeated string supported_credential_types = 5;
+  bool is_issuer = 6;
+  bool is_verifier = 7;
+  uint64 uptime_seconds = 8;
+  uint64 started_at = 9;
+}
+
+message PeerInfo {
+  string peer_id = 1;
+  string did = 2;
+  string address = 3;
+  uint64 connected_since = 4;
+  double trust_score = 5;
+  uint64 latency_ms = 6;
+  bool is_issuer = 7;
+}
+
+message NetworkStats {
+  uint32 connected_peers = 1;
+  uint64 credentials_issued = 2;
+  uint64 verifications_performed = 3;
+  uint64 humanity_proofs_generated = 4;
+  uint32 registered_issuers = 5;
+  uint32 registered_dids = 6;
+}

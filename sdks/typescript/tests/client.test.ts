@@ -1,172 +1,150 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { GppnClient } from "../src/client.js";
-import { GppnIdentity } from "../src/identity.js";
-import { ConnectionError, PaymentError } from "../src/errors.js";
+import { describe, it, expect } from "vitest";
+import { VeritasClient } from "../src/client.js";
+import { ConnectionError, CredentialError } from "../src/errors.js";
+import { CredentialState } from "../src/types.js";
 
-describe("GppnClient", () => {
-  let client: GppnClient;
+describe("VeritasClient", () => {
+  it("should connect and disconnect", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
 
-  beforeEach(() => {
-    client = new GppnClient({ url: "http://localhost:9000" });
+    expect(client.connected).toBe(false);
+
+    await client.connect();
+    expect(client.connected).toBe(true);
+
+    await client.disconnect();
+    expect(client.connected).toBe(false);
   });
 
-  describe("creation", () => {
-    it("should create a client with a URL", () => {
-      expect(client).toBeDefined();
-      expect(client.connected).toBe(false);
-      expect(client.identity).toBeUndefined();
-    });
+  it("should throw when connecting twice", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
 
-    it("should create a client with an existing keypair", async () => {
-      const keypair = await GppnIdentity.createIdentity();
-      const clientWithKey = new GppnClient({
-        url: "http://localhost:9000",
-        keypair,
-      });
-
-      expect(clientWithKey.identity).toBe(keypair);
-    });
+    await expect(client.connect()).rejects.toThrow(ConnectionError);
   });
 
-  describe("connect/disconnect lifecycle", () => {
-    it("should connect successfully", async () => {
-      await client.connect();
-      expect(client.connected).toBe(true);
-    });
+  it("should throw when disconnecting while not connected", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
 
-    it("should disconnect successfully after connecting", async () => {
-      await client.connect();
-      await client.disconnect();
-      expect(client.connected).toBe(false);
-    });
-
-    it("should throw when connecting while already connected", async () => {
-      await client.connect();
-      await expect(client.connect()).rejects.toThrow(ConnectionError);
-      await expect(client.connect()).rejects.toThrow("Already connected");
-    });
-
-    it("should throw when disconnecting while not connected", async () => {
-      await expect(client.disconnect()).rejects.toThrow(ConnectionError);
-      await expect(client.disconnect()).rejects.toThrow("Not connected");
-    });
+    await expect(client.disconnect()).rejects.toThrow(ConnectionError);
   });
 
-  describe("identity management", () => {
-    it("should create a new identity", async () => {
-      const identity = await client.createIdentity();
-      expect(identity).toBeInstanceOf(GppnIdentity);
-      expect(client.identity).toBe(identity);
-    });
+  it("should create an identity with a DID", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    const identity = await client.createIdentity();
+
+    expect(identity.did).toMatch(/^did:veritas:key:/);
+    expect(client.identity).toBe(identity);
   });
 
-  describe("payments", () => {
-    it("should throw when sending payment while not connected", async () => {
-      await client.createIdentity();
-      await expect(
-        client.sendPayment("recipient", "100", { code: "USD", decimals: 2 })
-      ).rejects.toThrow(ConnectionError);
-    });
+  it("should issue a credential", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
+    await client.createIdentity();
 
-    it("should throw when sending payment without identity", async () => {
-      await client.connect();
-      await expect(
-        client.sendPayment("recipient", "100", { code: "USD", decimals: 2 })
-      ).rejects.toThrow(PaymentError);
-    });
+    const vc = await client.issueCredential(
+      "did:veritas:key:subject456",
+      ["KycBasic"],
+      { full_name: "Alice Smith", country: "US" }
+    );
 
-    it("should send a payment successfully", async () => {
-      await client.connect();
-      await client.createIdentity();
-
-      const payment = await client.sendPayment(
-        "recipient_key",
-        "50.00",
-        { code: "USD", decimals: 2 },
-        "Test payment"
-      );
-
-      expect(payment.id).toMatch(/^pay_/);
-      expect(payment.recipient).toBe("recipient_key");
-      expect(payment.amount.value).toBe("50.00");
-      expect(payment.memo).toBe("Test payment");
-    });
-
-    it("should retrieve payment status after sending", async () => {
-      await client.connect();
-      await client.createIdentity();
-
-      const payment = await client.sendPayment(
-        "recipient_key",
-        "25.00",
-        { code: "USD", decimals: 2 }
-      );
-
-      const status = await client.getPaymentStatus(payment.id);
-      expect(status).toBeDefined();
-      expect(status?.id).toBe(payment.id);
-    });
-
-    it("should return undefined for unknown payment ID", async () => {
-      const status = await client.getPaymentStatus("nonexistent");
-      expect(status).toBeUndefined();
-    });
+    expect(vc.id).toMatch(/^vc_/);
+    expect(vc.issuer).toBe(client.identity!.did);
+    expect(vc.subject).toBe("did:veritas:key:subject456");
+    expect(vc.state).toBe(CredentialState.Issued);
+    expect(vc.claims.full_name).toBe("Alice Smith");
   });
 
-  describe("routes", () => {
-    it("should throw when finding routes while not connected", async () => {
-      await client.createIdentity();
-      await expect(
-        client.findRoutes("recipient", {
-          value: "100",
-          currency: { code: "USD", decimals: 2 },
-        })
-      ).rejects.toThrow(ConnectionError);
-    });
+  it("should require connection to issue credentials", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.createIdentity();
 
-    it("should find routes when connected", async () => {
-      await client.connect();
-      await client.createIdentity();
-
-      const routes = await client.findRoutes("recipient_key", {
-        value: "100",
-        currency: { code: "USD", decimals: 2 },
-      });
-
-      expect(routes).toBeInstanceOf(Array);
-      expect(routes.length).toBeGreaterThan(0);
-      expect(routes[0].score).toBeGreaterThanOrEqual(routes[routes.length - 1].score);
-    });
+    await expect(
+      client.issueCredential("did:veritas:key:sub", ["KycBasic"], {
+        name: "Alice",
+      })
+    ).rejects.toThrow(ConnectionError);
   });
 
-  describe("trust", () => {
-    it("should return a default trust score for unknown peers", async () => {
-      const score = await client.getTrustScore("unknown_peer");
-      expect(score.peerId).toBe("unknown_peer");
-      expect(score.score).toBe(0.5);
-    });
+  it("should require identity to issue credentials", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
+
+    await expect(
+      client.issueCredential("did:veritas:key:sub", ["KycBasic"], {
+        name: "Alice",
+      })
+    ).rejects.toThrow(CredentialError);
   });
 
-  describe("node operations", () => {
-    it("should throw when getting peers while not connected", async () => {
-      await expect(client.getPeers()).rejects.toThrow(ConnectionError);
-    });
+  it("should store and retrieve credentials", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
+    await client.createIdentity();
 
-    it("should return peers when connected", async () => {
-      await client.connect();
-      const peers = await client.getPeers();
-      expect(peers).toBeInstanceOf(Array);
-    });
+    const vc = await client.issueCredential(
+      "did:veritas:key:subject456",
+      ["KycBasic"],
+      { name: "Alice" }
+    );
 
-    it("should throw when getting node status while not connected", async () => {
-      await expect(client.getNodeStatus()).rejects.toThrow(ConnectionError);
-    });
+    const retrieved = await client.getCredential(vc.id);
+    expect(retrieved).toEqual(vc);
 
-    it("should return node status when connected", async () => {
-      await client.connect();
-      const status = await client.getNodeStatus();
-      expect(status.connected).toBe(true);
-      expect(status.version).toBe("0.1.0");
-    });
+    const all = await client.listCredentials();
+    expect(all).toHaveLength(1);
+    expect(all[0].id).toBe(vc.id);
+  });
+
+  it("should request age proofs", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
+    await client.createIdentity();
+
+    const req = await client.requestAgeProof(18);
+
+    expect(req.id).toMatch(/^pr_/);
+    expect(req.verifier).toBe(client.identity!.did);
+    expect(req.params.min_age).toBe(18);
+  });
+
+  it("should request residency proofs", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
+    await client.createIdentity();
+
+    const req = await client.requestResidencyProof(["US", "BR"]);
+
+    expect(req.id).toMatch(/^pr_/);
+    expect(req.params.allowed_countries).toEqual(["US", "BR"]);
+  });
+
+  it("should manage trust scores", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    const did = "did:veritas:key:peer1";
+
+    const initial = await client.getTrustScore(did);
+    expect(initial.score).toBe(0.5);
+
+    await client.updateTrust(did, true);
+    const updated = await client.getTrustScore(did);
+    expect(updated.score).toBe(1.0);
+  });
+
+  it("should get node status", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+    await client.connect();
+    await client.createIdentity();
+
+    const status = await client.getNodeStatus();
+    expect(status.did).toMatch(/^did:veritas:key:/);
+    expect(status.connected).toBe(true);
+    expect(status.version).toBe("0.1.0");
+  });
+
+  it("should require connection for getPeers", async () => {
+    const client = new VeritasClient({ url: "http://localhost:9001" });
+
+    await expect(client.getPeers()).rejects.toThrow(ConnectionError);
   });
 });

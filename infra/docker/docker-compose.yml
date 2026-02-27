@@ -1,74 +1,87 @@
 version: "3.8"
 
 services:
-  # GPPN Node 1 (bootstrap node)
+  # Veritas Node 1 (bootstrap node)
   node1:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.node
-    container_name: gppn-node1
+    container_name: veritas-node1
     command: ["--port", "9000", "--api-port", "9001", "--log-level", "info"]
     ports:
       - "9000:9000"
       - "9001:9001"
       - "9002:9002"
     volumes:
-      - node1-data:/home/gppn/data
+      - node1-data:/home/veritas/data
     networks:
-      - gppn-net
+      - veritas-net
 
-  # GPPN Node 2
+  # Veritas Node 2
   node2:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.node
-    container_name: gppn-node2
+    container_name: veritas-node2
     command: ["--port", "9000", "--api-port", "9001", "--log-level", "info"]
     ports:
       - "9010:9000"
       - "9011:9001"
       - "9012:9002"
     volumes:
-      - node2-data:/home/gppn/data
+      - node2-data:/home/veritas/data
     depends_on:
       - node1
     networks:
-      - gppn-net
+      - veritas-net
 
-  # GPPN Node 3
+  # Veritas Node 3
   node3:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.node
-    container_name: gppn-node3
+    container_name: veritas-node3
     command: ["--port", "9000", "--api-port", "9001", "--log-level", "info"]
     ports:
       - "9020:9000"
       - "9021:9001"
       - "9022:9002"
     volumes:
-      - node3-data:/home/gppn/data
+      - node3-data:/home/veritas/data
     depends_on:
       - node1
     networks:
-      - gppn-net
+      - veritas-net
 
-  # PostgreSQL for explorer and settlement adapters
+  # Registry API
+  registry-api:
+    build:
+      context: ../../services/registry-api
+      dockerfile: Dockerfile
+    container_name: veritas-registry-api
+    ports:
+      - "8084:8084"
+    environment:
+      VERITAS_PORT: "8084"
+    networks:
+      - veritas-net
+
+  # PostgreSQL for credential storage
   postgres:
     image: postgres:16-alpine
-    container_name: gppn-postgres
+    container_name: veritas-postgres
     environment:
-      POSTGRES_USER: gppn
-      POSTGRES_PASSWORD: gppn_dev
-      POSTGRES_DB: gppn
+      POSTGRES_USER: veritas
+      POSTGRES_PASSWORD: veritas_dev
+      POSTGRES_DB: veritas
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - gppn-net
+      - veritas-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gppn"]
+      test: ["CMD-SHELL", "pg_isready -U veritas"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -76,13 +89,13 @@ services:
   # DragonflyDB (Redis-compatible) for caching
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly
-    container_name: gppn-dragonfly
+    container_name: veritas-dragonfly
     ports:
       - "6379:6379"
     volumes:
       - dragonfly-data:/data
     networks:
-      - gppn-net
+      - veritas-net
 
 volumes:
   node1-data:
@@ -92,5 +105,5 @@ volumes:
   dragonfly-data:
 
 networks:
-  gppn-net:
+  veritas-net:
     driver: bridge

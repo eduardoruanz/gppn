@@ -1,0 +1,23 @@
+[package]
+name = "veritas-credentials"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Veritas credential management: issuer, holder wallet, verifier, schema registry"
+
+[dependencies]
+veritas-core = { path = "../veritas-core" }
+veritas-crypto = { path = "../veritas-crypto" }
+veritas-identity = { path = "../veritas-identity" }
+dashmap = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

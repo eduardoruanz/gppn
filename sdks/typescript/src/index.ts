@@ -1,46 +1,52 @@
 /**
- * GPPN TypeScript SDK
+ * Veritas TypeScript SDK
  *
- * A complete SDK for interacting with the Global Peer-to-Peer Payment Network.
+ * A complete SDK for interacting with the Veritas decentralized identity network.
  */
 
 // Core types
 export {
-  PaymentState,
-  type Currency,
-  type Amount,
-  type PaymentMessage,
-  type RouteEntry,
-  type Route,
+  CredentialState,
+  CredentialType,
+  ProofType,
+  type Claim,
+  type VerifiableCredential,
+  type CredentialProof,
+  type VerifiablePresentation,
+  type ZkProof,
+  type ProofRequest,
   type TrustScore,
   type PeerInfo,
   type NodeStatus,
-  type SettlementStatus,
+  type CredentialSchema,
+  type VerificationResult,
+  type VerificationCheck,
 } from "./types.js";
 
 // Error classes
 export {
-  GppnError,
+  VeritasError,
   ConnectionError,
-  PaymentError,
-  RoutingError,
+  CredentialError,
+  ProofError,
   IdentityError,
+  VerificationError,
 } from "./errors.js";
 
 // Identity management
-export { GppnIdentity } from "./identity.js";
+export { VeritasIdentity } from "./identity.js";
 
-// Payment building
-export { PaymentBuilder } from "./payments.js";
+// Credential building
+export { CredentialBuilder } from "./credentials.js";
 
-// Route finding
-export { RouteFinder } from "./routing.js";
+// Proof requests
+export { ProofRequester } from "./proofs.js";
 
-// Settlement tracking
-export { SettlementTracker } from "./settlement.js";
+// Credential verification
+export { CredentialVerifier } from "./verification.js";
 
 // Trust management
 export { TrustManager } from "./trust.js";
 
 // Main client
-export { GppnClient, type GppnClientOptions } from "./client.js";
+export { VeritasClient, type VeritasClientOptions } from "./client.js";

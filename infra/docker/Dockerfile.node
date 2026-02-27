@@ -1,4 +1,4 @@
-# GPPN Node — Multi-stage Docker Build
+# Veritas Node — Multi-stage Docker Build
 # Stage 1: Build the Rust binary
 FROM rust:bookworm AS builder
 
@@ -9,24 +9,24 @@ RUN apt-get update && apt-get install -y protobuf-compiler cmake && rm -rf /var/
 
 # Copy workspace manifests first for dependency caching
 COPY Cargo.toml Cargo.lock* ./
-COPY crates/gppn-core/Cargo.toml crates/gppn-core/
-COPY crates/gppn-crypto/Cargo.toml crates/gppn-crypto/
-COPY crates/gppn-network/Cargo.toml crates/gppn-network/
-COPY crates/gppn-routing/Cargo.toml crates/gppn-routing/
-COPY crates/gppn-settlement/Cargo.toml crates/gppn-settlement/
-COPY crates/gppn-identity/Cargo.toml crates/gppn-identity/
-COPY crates/gppn-node/Cargo.toml crates/gppn-node/
-COPY crates/gppn-cli/Cargo.toml crates/gppn-cli/
+COPY crates/veritas-core/Cargo.toml crates/veritas-core/
+COPY crates/veritas-crypto/Cargo.toml crates/veritas-crypto/
+COPY crates/veritas-network/Cargo.toml crates/veritas-network/
+COPY crates/veritas-credentials/Cargo.toml crates/veritas-credentials/
+COPY crates/veritas-proof/Cargo.toml crates/veritas-proof/
+COPY crates/veritas-identity/Cargo.toml crates/veritas-identity/
+COPY crates/veritas-node/Cargo.toml crates/veritas-node/
+COPY crates/veritas-cli/Cargo.toml crates/veritas-cli/
 
 # Create stub files for dependency caching
-RUN mkdir -p crates/gppn-core/src && echo "pub fn stub() {}" > crates/gppn-core/src/lib.rs && \
-    mkdir -p crates/gppn-crypto/src && echo "pub fn stub() {}" > crates/gppn-crypto/src/lib.rs && \
-    mkdir -p crates/gppn-network/src && echo "pub fn stub() {}" > crates/gppn-network/src/lib.rs && \
-    mkdir -p crates/gppn-routing/src && echo "pub fn stub() {}" > crates/gppn-routing/src/lib.rs && \
-    mkdir -p crates/gppn-settlement/src && echo "pub fn stub() {}" > crates/gppn-settlement/src/lib.rs && \
-    mkdir -p crates/gppn-identity/src && echo "pub fn stub() {}" > crates/gppn-identity/src/lib.rs && \
-    mkdir -p crates/gppn-node/src && echo "fn main() {}" > crates/gppn-node/src/main.rs && \
-    mkdir -p crates/gppn-cli/src && echo "fn main() {}" > crates/gppn-cli/src/main.rs
+RUN mkdir -p crates/veritas-core/src && echo "pub fn stub() {}" > crates/veritas-core/src/lib.rs && \
+    mkdir -p crates/veritas-crypto/src && echo "pub fn stub() {}" > crates/veritas-crypto/src/lib.rs && \
+    mkdir -p crates/veritas-network/src && echo "pub fn stub() {}" > crates/veritas-network/src/lib.rs && \
+    mkdir -p crates/veritas-credentials/src && echo "pub fn stub() {}" > crates/veritas-credentials/src/lib.rs && \
+    mkdir -p crates/veritas-proof/src && echo "pub fn stub() {}" > crates/veritas-proof/src/lib.rs && \
+    mkdir -p crates/veritas-identity/src && echo "pub fn stub() {}" > crates/veritas-identity/src/lib.rs && \
+    mkdir -p crates/veritas-node/src && echo "fn main() {}" > crates/veritas-node/src/main.rs && \
+    mkdir -p crates/veritas-cli/src && echo "fn main() {}" > crates/veritas-cli/src/main.rs
 
 # Pre-build dependencies (cached unless Cargo.toml changes)
 RUN cargo build --release --workspace 2>/dev/null || true
@@ -36,7 +36,7 @@ COPY proto/ proto/
 COPY crates/ crates/
 
 # Build the actual binaries
-RUN cargo build --release -p gppn-node -p gppn-cli
+RUN cargo build --release -p veritas-node -p veritas-cli
 
 # Stage 2: Runtime image
 FROM debian:bookworm-slim
@@ -46,13 +46,13 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/bash gppn
+RUN useradd -m -s /bin/bash veritas
 
-COPY --from=builder /build/target/release/gppn-node /usr/local/bin/gppn-node
-COPY --from=builder /build/target/release/gppn /usr/local/bin/gppn
+COPY --from=builder /build/target/release/veritas-node /usr/local/bin/veritas-node
+COPY --from=builder /build/target/release/veritas /usr/local/bin/veritas
 
-USER gppn
-WORKDIR /home/gppn
+USER veritas
+WORKDIR /home/veritas
 
 # P2P port
 EXPOSE 9000
@@ -61,5 +61,5 @@ EXPOSE 9001
 # Metrics port
 EXPOSE 9002
 
-ENTRYPOINT ["gppn-node"]
+ENTRYPOINT ["veritas-node"]
 CMD ["--log-level", "info"]

@@ -5,7 +5,7 @@ export PATH="/opt/homebrew/bin:$PATH"
 
 SERVICES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== Building GPPN Services ==="
+echo "=== Building Veritas Services ==="
 echo ""
 
 # Build shared package
@@ -15,42 +15,28 @@ go build ./...
 echo "pkg: BUILD OK"
 echo ""
 
-# Build and test sa-ethereum
-echo "--- Building sa-ethereum ---"
-cd "$SERVICES_DIR/sa-ethereum"
+# Build and test issuer-api
+echo "--- Building issuer-api ---"
+cd "$SERVICES_DIR/issuer-api"
 go mod tidy
 go build ./...
-echo "sa-ethereum: BUILD OK"
-go test ./...
-echo "sa-ethereum: TESTS OK"
+echo "issuer-api: BUILD OK"
 echo ""
 
-# Build and test sa-bitcoin
-echo "--- Building sa-bitcoin ---"
-cd "$SERVICES_DIR/sa-bitcoin"
+# Build and test verifier-api
+echo "--- Building verifier-api ---"
+cd "$SERVICES_DIR/verifier-api"
 go mod tidy
 go build ./...
-echo "sa-bitcoin: BUILD OK"
-go test ./...
-echo "sa-bitcoin: TESTS OK"
+echo "verifier-api: BUILD OK"
 echo ""
 
-# Build and test sa-stablecoin
-echo "--- Building sa-stablecoin ---"
-cd "$SERVICES_DIR/sa-stablecoin"
+# Build and test registry-api
+echo "--- Building registry-api ---"
+cd "$SERVICES_DIR/registry-api"
 go mod tidy
 go build ./...
-echo "sa-stablecoin: BUILD OK"
-go test ./...
-echo "sa-stablecoin: TESTS OK"
-echo ""
-
-# Build explorer-api
-echo "--- Building explorer-api ---"
-cd "$SERVICES_DIR/explorer-api"
-go mod tidy
-go build ./...
-echo "explorer-api: BUILD OK"
+echo "registry-api: BUILD OK"
 echo ""
 
 # Build gateway
@@ -61,4 +47,4 @@ go build ./...
 echo "gateway: BUILD OK"
 echo ""
 
-echo "=== All services built successfully ==="
+echo "=== All Veritas services built successfully ==="

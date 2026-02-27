@@ -1,3 +1,3 @@
-module github.com/gppn-protocol/gppn/services/gateway
+module github.com/veritas-protocol/veritas/services/gateway
 
 go 1.21

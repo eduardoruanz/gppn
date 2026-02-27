@@ -1,5 +1,4 @@
-// Package config provides common configuration loading for GPPN services.
-// It uses a simple TOML-like format for configuration files.
+// Package config provides common configuration loading for Veritas services.
 package config
 
 import (
@@ -10,7 +9,7 @@ import (
 	"strings"
 )
 
-// AppConfig holds the common configuration for all GPPN services.
+// AppConfig holds the common configuration for all Veritas services.
 type AppConfig struct {
 	Name        string
 	Port        int
@@ -29,8 +28,6 @@ func DefaultConfig(name string) AppConfig {
 }
 
 // LoadFromFile loads configuration from a TOML-style file.
-// The file format is simple key = "value" or key = number pairs.
-// Lines starting with # are comments.
 func LoadFromFile(path string) (AppConfig, error) {
 	cfg := DefaultConfig("")
 
@@ -44,7 +41,6 @@ func LoadFromFile(path string) (AppConfig, error) {
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
-		// Skip empty lines and comments.
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "[") {
 			continue
 		}
@@ -56,7 +52,6 @@ func LoadFromFile(path string) (AppConfig, error) {
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
-		// Remove surrounding quotes if present.
 		value = strings.Trim(value, `"'`)
 
 		switch key {
@@ -87,21 +82,21 @@ func LoadFromFile(path string) (AppConfig, error) {
 }
 
 // LoadFromEnv loads configuration from environment variables.
-// Environment variables take the form GPPN_<KEY> (e.g., GPPN_PORT, GPPN_LOG_LEVEL).
+// Environment variables take the form VERITAS_<KEY>.
 func LoadFromEnv(name string) AppConfig {
 	cfg := DefaultConfig(name)
 
-	if v := os.Getenv("GPPN_PORT"); v != "" {
+	if v := os.Getenv("VERITAS_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.Port = p
 		}
 	}
 
-	if v := os.Getenv("GPPN_LOG_LEVEL"); v != "" {
+	if v := os.Getenv("VERITAS_LOG_LEVEL"); v != "" {
 		cfg.LogLevel = v
 	}
 
-	if v := os.Getenv("GPPN_METRICS_PORT"); v != "" {
+	if v := os.Getenv("VERITAS_METRICS_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.MetricsPort = p
 		}

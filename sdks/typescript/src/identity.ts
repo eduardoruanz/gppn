@@ -13,27 +13,30 @@ ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
   return h.digest();
 };
 
-/** Represents a GPPN identity backed by an Ed25519 key pair. */
-export class GppnIdentity {
+/** Represents a Veritas identity backed by an Ed25519 key pair and a DID. */
+export class VeritasIdentity {
   /** The Ed25519 private key (32 bytes). */
   public readonly privateKey: Uint8Array;
   /** The Ed25519 public key (32 bytes). */
   public readonly publicKey: Uint8Array;
+  /** The DID associated with this identity. */
+  public readonly did: string;
 
   constructor(privateKey: Uint8Array, publicKey: Uint8Array) {
     this.privateKey = privateKey;
     this.publicKey = publicKey;
+    this.did = `did:veritas:key:${Buffer.from(publicKey).toString("hex")}`;
   }
 
   /**
-   * Create a new random GPPN identity.
-   * @returns A promise that resolves to a new GppnIdentity.
+   * Create a new random Veritas identity.
+   * @returns A promise that resolves to a new VeritasIdentity.
    */
-  static async createIdentity(): Promise<GppnIdentity> {
+  static async createIdentity(): Promise<VeritasIdentity> {
     try {
       const privateKey = ed.utils.randomPrivateKey();
       const publicKey = await ed.getPublicKeyAsync(privateKey);
-      return new GppnIdentity(privateKey, publicKey);
+      return new VeritasIdentity(privateKey, publicKey);
     } catch (err) {
       throw new IdentityError(
         `Failed to create identity: ${err instanceof Error ? err.message : String(err)}`
@@ -75,9 +78,7 @@ export class GppnIdentity {
     }
   }
 
-  /**
-   * Get the public key as a hex string, useful as a node/peer identifier.
-   */
+  /** Get the public key as a hex string. */
   get publicKeyHex(): string {
     return Buffer.from(this.publicKey).toString("hex");
   }

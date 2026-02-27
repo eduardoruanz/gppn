@@ -1,0 +1,32 @@
+[package]
+name = "veritas-node"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Veritas decentralized identity full node"
+
+[[bin]]
+name = "veritas-node"
+path = "src/main.rs"
+
+[dependencies]
+veritas-core = { path = "../veritas-core" }
+veritas-crypto = { path = "../veritas-crypto" }
+veritas-network = { path = "../veritas-network" }
+veritas-credentials = { path = "../veritas-credentials" }
+veritas-proof = { path = "../veritas-proof" }
+veritas-identity = { path = "../veritas-identity" }
+tokio = { workspace = true }
+clap = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+rocksdb = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+libp2p = { workspace = true }
+axum = { workspace = true }

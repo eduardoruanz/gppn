@@ -1,11 +1,11 @@
-# Getting Started with GPPN
+# Getting Started with Veritas
 
 ## Prerequisites
 
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Rust | 1.75+ | Core protocol implementation |
-| Go | 1.21+ | Settlement adapter services |
+| Go | 1.21+ | Identity service APIs |
 | protoc | 3.x | Protocol Buffers compilation |
 | cmake | 3.x | Build dependency for RocksDB |
 | Node.js | 18+ | TypeScript SDK |
@@ -30,7 +30,7 @@ rustup component add clippy rustfmt
 # Build all crates
 cargo build --workspace
 
-# Run all tests (292 tests)
+# Run all tests (315+ tests)
 cargo test --workspace
 
 # Check for lint issues
@@ -47,10 +47,9 @@ cargo fmt --check
 cd services && bash build_all.sh
 
 # Or build individually
-cd services/sa-ethereum && go build ./...
-cd services/sa-bitcoin && go build ./...
-cd services/sa-stablecoin && go build ./...
-cd services/explorer-api && go build ./...
+cd services/issuer-api && go build ./...
+cd services/verifier-api && go build ./...
+cd services/registry-api && go build ./...
 cd services/gateway && go build ./...
 ```
 
@@ -69,10 +68,10 @@ npm test
 
 ```bash
 # Create default config in ./node-data/
-cargo run -p gppn-cli -- init --data-dir ./node-data
+cargo run -p veritas-cli -- init --data-dir ./node-data
 ```
 
-This creates a `gppn.toml` configuration file:
+This creates a `veritas.toml` configuration file:
 
 ```toml
 [network]
@@ -95,28 +94,30 @@ enabled = true
 ### Start the Node
 
 ```bash
-cargo run -p gppn-cli -- start --data-dir ./node-data
+cargo run -p veritas-cli -- start --data-dir ./node-data
 ```
 
 ### Check Status
 
 ```bash
-cargo run -p gppn-cli -- status --api-url http://localhost:9001
+cargo run -p veritas-cli -- status --api-url http://localhost:9001
 ```
 
-### List Peers
+### Issue a Credential
 
 ```bash
-cargo run -p gppn-cli -- peers --api-url http://localhost:9001
+cargo run -p veritas-cli -- issue \
+  --subject did:veritas:key:12D3KooW... \
+  --credential-type KycBasic \
+  --claims '{"full_name":"Alice Smith","country":"US"}' \
+  --api-url http://localhost:9001
 ```
 
-### Send a Payment
+### Verify a Credential
 
 ```bash
-cargo run -p gppn-cli -- send \
-  --recipient did:gppn:key:12D3KooW... \
-  --amount 50.00 \
-  --currency USD \
+cargo run -p veritas-cli -- verify \
+  --credential ./credential.json \
   --api-url http://localhost:9001
 ```
 
@@ -129,10 +130,11 @@ docker compose -f infra/docker/docker-compose.yml up -d
 ```
 
 This starts:
-- **gppn-node-1**: P2P on :9000, API on :9001, metrics on :9002
-- **gppn-node-2**: P2P on :9010, API on :9011, metrics on :9012
-- **gppn-node-3**: P2P on :9020, API on :9021, metrics on :9022
-- **PostgreSQL 16**: on :5432 (for explorer-api)
+- **veritas-node-1**: P2P on :9000, API on :9001, metrics on :9002
+- **veritas-node-2**: P2P on :9010, API on :9011, metrics on :9012
+- **veritas-node-3**: P2P on :9020, API on :9021, metrics on :9022
+- **registry-api**: on :8084 (DID + schema registry)
+- **PostgreSQL 16**: on :5432
 - **DragonflyDB**: on :6379 (for caching)
 
 ## Next Steps
@@ -140,4 +142,4 @@ This starts:
 - [Architecture Overview](architecture.md) — understand the protocol layers
 - [SDK Integration Guide](sdk-integration.md) — build applications with the TypeScript SDK
 - [Node Operator Guide](node-operator.md) — production deployment
-- [Protocol Specification](../spec/GPPN-SPEC-v1.md) — full protocol details
+- [Protocol Specification](../spec/VERITAS-SPEC-v1.md) — full protocol details

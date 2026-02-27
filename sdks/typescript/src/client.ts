@@ -1,52 +1,51 @@
 /**
- * Main GPPN client -- the primary entry point for the SDK.
+ * Main Veritas client — the primary entry point for the SDK.
  */
 
-import { ConnectionError, PaymentError } from "./errors.js";
-import { GppnIdentity } from "./identity.js";
-import { PaymentBuilder } from "./payments.js";
-import { RouteFinder } from "./routing.js";
-import { SettlementTracker } from "./settlement.js";
+import { ConnectionError, CredentialError } from "./errors.js";
+import { VeritasIdentity } from "./identity.js";
+import { CredentialBuilder } from "./credentials.js";
+import { ProofRequester } from "./proofs.js";
+import { CredentialVerifier } from "./verification.js";
 import { TrustManager } from "./trust.js";
 import type {
-  Amount,
-  Currency,
   NodeStatus,
-  PaymentMessage,
   PeerInfo,
-  Route,
+  ProofRequest,
   TrustScore,
+  VerifiableCredential,
+  VerificationResult,
 } from "./types.js";
-import { PaymentState } from "./types.js";
 
-/** Options for creating a GppnClient. */
-export interface GppnClientOptions {
-  /** The URL of the GPPN node to connect to. */
+/** Options for creating a VeritasClient. */
+export interface VeritasClientOptions {
+  /** The URL of the Veritas node to connect to. */
   url: string;
   /** An optional pre-existing identity (key pair) to use. */
-  keypair?: GppnIdentity;
+  identity?: VeritasIdentity;
 }
 
 /**
- * The main GPPN client.
+ * The main Veritas client.
  *
- * Provides high-level methods for interacting with the GPPN network
- * including payments, routing, trust, and identity management.
+ * Provides high-level methods for interacting with the Veritas network
+ * including credential issuance, verification, proof requests, trust,
+ * and identity management.
  */
-export class GppnClient {
+export class VeritasClient {
   private readonly _url: string;
-  private _identity: GppnIdentity | undefined;
+  private _identity: VeritasIdentity | undefined;
   private _connected: boolean = false;
-  private readonly _routeFinder: RouteFinder;
-  private readonly _settlementTracker: SettlementTracker;
+  private readonly _proofRequester: ProofRequester;
+  private readonly _credentialVerifier: CredentialVerifier;
   private readonly _trustManager: TrustManager;
-  private readonly _payments: Map<string, PaymentMessage> = new Map();
+  private readonly _credentials: Map<string, VerifiableCredential> = new Map();
 
-  constructor(options: GppnClientOptions) {
+  constructor(options: VeritasClientOptions) {
     this._url = options.url;
-    this._identity = options.keypair;
-    this._routeFinder = new RouteFinder(options.url);
-    this._settlementTracker = new SettlementTracker();
+    this._identity = options.identity;
+    this._proofRequester = new ProofRequester(options.url);
+    this._credentialVerifier = new CredentialVerifier();
     this._trustManager = new TrustManager();
   }
 
@@ -56,139 +55,198 @@ export class GppnClient {
   }
 
   /** The client's identity, if one has been set or created. */
-  get identity(): GppnIdentity | undefined {
+  get identity(): VeritasIdentity | undefined {
     return this._identity;
   }
 
+  /** The credential verifier instance for managing trusted issuers. */
+  get verifier(): CredentialVerifier {
+    return this._credentialVerifier;
+  }
+
   /**
-   * Connect to the GPPN network.
-   *
-   * This is a placeholder that simulates establishing a connection.
-   *
+   * Connect to the Veritas network.
    * @throws ConnectionError if already connected.
    */
   async connect(): Promise<void> {
     if (this._connected) {
       throw new ConnectionError("Already connected");
     }
-
-    // Placeholder: simulate connection handshake
     this._connected = true;
   }
 
   /**
-   * Disconnect from the GPPN network.
-   *
+   * Disconnect from the Veritas network.
    * @throws ConnectionError if not connected.
    */
   async disconnect(): Promise<void> {
     if (!this._connected) {
       throw new ConnectionError("Not connected");
     }
-
     this._connected = false;
   }
 
   /**
    * Create a new identity for this client.
-   *
-   * @returns The newly created GppnIdentity.
+   * @returns The newly created VeritasIdentity.
    */
-  async createIdentity(): Promise<GppnIdentity> {
-    this._identity = await GppnIdentity.createIdentity();
+  async createIdentity(): Promise<VeritasIdentity> {
+    this._identity = await VeritasIdentity.createIdentity();
     return this._identity;
   }
 
   /**
-   * Send a payment to a recipient.
+   * Issue a verifiable credential to a subject.
    *
-   * @param recipient - Hex-encoded public key of the recipient.
-   * @param value - The amount value as a string.
-   * @param currency - The currency to use.
-   * @param memo - Optional payment memo.
-   * @returns The created PaymentMessage.
+   * @param subjectDid - DID of the subject to issue the credential to.
+   * @param credentialType - The type(s) of credential.
+   * @param claims - The claims to include in the credential.
+   * @param expiresAt - Optional expiration timestamp (ISO 8601).
+   * @returns The issued VerifiableCredential.
    * @throws ConnectionError if not connected.
-   * @throws PaymentError if no identity is set.
+   * @throws CredentialError if no identity is set.
    */
-  async sendPayment(
-    recipient: string,
-    value: string,
-    currency: Currency,
-    memo?: string
-  ): Promise<PaymentMessage> {
+  async issueCredential(
+    subjectDid: string,
+    credentialType: string[],
+    claims: Record<string, string | number | boolean>,
+    expiresAt?: string
+  ): Promise<VerifiableCredential> {
     if (!this._connected) {
-      throw new ConnectionError("Must be connected to send payments");
+      throw new ConnectionError("Must be connected to issue credentials");
     }
     if (!this._identity) {
-      throw new PaymentError("No identity set; call createIdentity() first");
+      throw new CredentialError(
+        "No identity set; call createIdentity() first"
+      );
     }
 
-    const builder = new PaymentBuilder()
-      .sender(this._identity.publicKeyHex)
-      .recipient(recipient)
-      .amount(value, currency);
+    const builder = new CredentialBuilder()
+      .issuer(this._identity.did)
+      .subject(subjectDid)
+      .claims(claims);
 
-    if (memo) {
-      builder.memo(memo);
+    for (const t of credentialType) {
+      builder.type(t);
     }
 
-    const payment = builder.build();
-    this._payments.set(payment.id, payment);
+    if (expiresAt) {
+      builder.expires(expiresAt);
+    }
 
-    // Start tracking settlement
-    this._settlementTracker.track(payment.id);
+    const credential = builder.build();
+    this._credentials.set(credential.id, credential);
 
-    return payment;
+    return credential;
   }
 
   /**
-   * Get the status of a previously sent payment.
+   * Verify a verifiable credential.
    *
-   * @param paymentId - The ID of the payment to check.
-   * @returns The PaymentMessage, or undefined if not found.
+   * @param credential - The credential to verify.
+   * @returns The verification result.
    */
-  async getPaymentStatus(paymentId: string): Promise<PaymentMessage | undefined> {
-    return this._payments.get(paymentId);
+  async verifyCredential(
+    credential: VerifiableCredential
+  ): Promise<VerificationResult> {
+    return this._credentialVerifier.verify(credential);
   }
 
   /**
-   * Find available routes to a recipient.
+   * Get a stored credential by ID.
    *
-   * @param recipient - Hex-encoded public key of the recipient.
-   * @param amount - The amount to route.
-   * @returns An array of possible routes.
-   * @throws ConnectionError if not connected.
-   * @throws PaymentError if no identity is set.
+   * @param credentialId - The ID of the credential.
+   * @returns The credential, or undefined if not found.
    */
-  async findRoutes(recipient: string, amount: Amount): Promise<Route[]> {
+  async getCredential(
+    credentialId: string
+  ): Promise<VerifiableCredential | undefined> {
+    return this._credentials.get(credentialId);
+  }
+
+  /**
+   * List all stored credentials.
+   * @returns An array of all stored credentials.
+   */
+  async listCredentials(): Promise<VerifiableCredential[]> {
+    return Array.from(this._credentials.values());
+  }
+
+  /**
+   * Create an age proof request.
+   *
+   * @param minAge - The minimum age to prove.
+   * @returns A ProofRequest to send to the credential holder.
+   * @throws ConnectionError if not connected.
+   * @throws CredentialError if no identity is set.
+   */
+  async requestAgeProof(minAge: number): Promise<ProofRequest> {
     if (!this._connected) {
-      throw new ConnectionError("Must be connected to find routes");
+      throw new ConnectionError("Must be connected to request proofs");
     }
     if (!this._identity) {
-      throw new PaymentError("No identity set; call createIdentity() first");
+      throw new CredentialError(
+        "No identity set; call createIdentity() first"
+      );
     }
 
-    return this._routeFinder.findRoutes(
-      this._identity.publicKeyHex,
-      recipient,
-      amount
+    return this._proofRequester.createAgeProofRequest(
+      this._identity.did,
+      minAge
+    );
+  }
+
+  /**
+   * Create a residency proof request.
+   *
+   * @param allowedCountries - List of allowed country codes.
+   * @returns A ProofRequest to send to the credential holder.
+   * @throws ConnectionError if not connected.
+   * @throws CredentialError if no identity is set.
+   */
+  async requestResidencyProof(
+    allowedCountries: string[]
+  ): Promise<ProofRequest> {
+    if (!this._connected) {
+      throw new ConnectionError("Must be connected to request proofs");
+    }
+    if (!this._identity) {
+      throw new CredentialError(
+        "No identity set; call createIdentity() first"
+      );
+    }
+
+    return this._proofRequester.createResidencyProofRequest(
+      this._identity.did,
+      allowedCountries
     );
   }
 
   /**
    * Get the trust score for a peer.
    *
-   * @param peerId - The public key of the peer.
+   * @param did - The DID of the peer.
    * @returns The trust score for the peer.
    */
-  async getTrustScore(peerId: string): Promise<TrustScore> {
-    return this._trustManager.getTrustScore(peerId);
+  async getTrustScore(did: string): Promise<TrustScore> {
+    return this._trustManager.getTrustScore(did);
+  }
+
+  /**
+   * Update trust score after a verification interaction.
+   *
+   * @param did - The DID of the peer.
+   * @param success - Whether the interaction was successful.
+   * @returns The updated trust score.
+   */
+  async updateTrust(did: string, success: boolean): Promise<TrustScore> {
+    return this._trustManager.updateScore(did, success);
   }
 
   /**
    * Get a list of known peers.
    *
-   * This is a placeholder that returns an empty list.
+   * Placeholder that returns an empty list.
    *
    * @returns An array of PeerInfo objects.
    * @throws ConnectionError if not connected.
@@ -197,15 +255,13 @@ export class GppnClient {
     if (!this._connected) {
       throw new ConnectionError("Must be connected to get peers");
     }
-
-    // Placeholder: return empty list
     return [];
   }
 
   /**
    * Get the status of the connected node.
    *
-   * This is a placeholder implementation.
+   * Placeholder implementation.
    *
    * @returns The node status.
    * @throws ConnectionError if not connected.
@@ -216,7 +272,8 @@ export class GppnClient {
     }
 
     return {
-      nodeId: this._identity?.publicKeyHex ?? "unknown",
+      did: this._identity?.did ?? "unknown",
+      peerId: this._identity?.publicKeyHex ?? "unknown",
       connected: this._connected,
       peerCount: 0,
       version: "0.1.0",

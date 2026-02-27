@@ -1,0 +1,39 @@
+syntax = "proto3";
+package veritas.v1;
+
+enum DidMethod {
+  DID_METHOD_UNSPECIFIED = 0;
+  DID_METHOD_KEY = 1;
+  DID_METHOD_WEB = 2;
+  DID_METHOD_PEER = 3;
+}
+
+message Did {
+  DidMethod method = 1;
+  string identifier = 2;
+}
+
+message VerificationMethod {
+  string id = 1;
+  string verification_type = 2;
+  string controller = 3;
+  bytes public_key_bytes = 4;
+}
+
+message Service {
+  string id = 1;
+  string service_type = 2;
+  string service_endpoint = 3;
+}
+
+message DidDocument {
+  string id = 1;
+  repeated VerificationMethod verification_methods = 2;
+  repeated string authentication = 3;
+  repeated string assertion_method = 4;
+  repeated string key_agreement = 5;
+  repeated Service services = 6;
+  uint64 created = 7;
+  uint64 updated = 8;
+  bytes signature = 9;
+}

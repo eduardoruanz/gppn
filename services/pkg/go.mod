@@ -1,3 +1,3 @@
-module github.com/gppn-protocol/gppn/services/pkg
+module github.com/veritas-protocol/veritas/services/pkg
 
 go 1.21

@@ -1,4 +1,4 @@
-// Package middleware provides HTTP middleware for the GPPN Gateway service.
+// Package middleware provides HTTP middleware for the Veritas Gateway service.
 package middleware
 
 import (
@@ -15,7 +15,7 @@ const (
 	BearerPrefix = "Bearer "
 
 	// stubAPIKey is a placeholder API key for development/testing.
-	stubAPIKey = "gppn-dev-api-key-placeholder"
+	stubAPIKey = "veritas-dev-api-key-placeholder"
 )
 
 // AuthMiddleware provides API key authentication for protected endpoints.

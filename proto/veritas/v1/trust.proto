@@ -1,0 +1,30 @@
+syntax = "proto3";
+package veritas.v1;
+
+message TrustAttestation {
+  string attester_did = 1;
+  string subject_did = 2;
+  double score = 3;
+  string category = 4;
+  string evidence = 5;
+  uint64 timestamp = 6;
+  bytes signature = 7;
+}
+
+message TrustScore {
+  string did = 1;
+  double humanity_score = 2;
+  double attestation_score = 3;
+  double credential_score = 4;
+  double activity_score = 5;
+  double composite_score = 6;
+  uint32 attestation_count = 7;
+  uint64 last_updated = 8;
+}
+
+message TrustWeights {
+  double humanity_weight = 1;
+  double attestation_weight = 2;
+  double credential_weight = 3;
+  double activity_weight = 4;
+}

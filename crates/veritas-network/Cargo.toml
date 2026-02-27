@@ -1,0 +1,25 @@
+[package]
+name = "veritas-network"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Veritas P2P networking via libp2p"
+
+[dependencies]
+veritas-core = { path = "../veritas-core" }
+veritas-crypto = { path = "../veritas-crypto" }
+libp2p = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+prost = { workspace = true }
+bytes = { workspace = true }
+async-trait = { workspace = true }
+serde_json = { workspace = true }
+rand = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

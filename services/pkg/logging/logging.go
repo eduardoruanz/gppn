@@ -1,4 +1,4 @@
-// Package logging provides structured logging setup for GPPN services
+// Package logging provides structured logging setup for Veritas services
 // using the standard library's log/slog package.
 package logging
 

@@ -1,90 +1,136 @@
 /**
- * Core types for the GPPN SDK.
+ * Core types for the Veritas SDK.
  */
 
-/** States a payment can be in during its lifecycle. */
-export enum PaymentState {
-  /** Payment has been created but not yet submitted. */
-  Created = "created",
-  /** Payment is pending processing. */
-  Pending = "pending",
-  /** Payment is being routed through the network. */
-  Routing = "routing",
-  /** Payment has been settled successfully. */
-  Settled = "settled",
-  /** Payment has failed. */
-  Failed = "failed",
-  /** Payment has been cancelled. */
-  Cancelled = "cancelled",
+/** States a verifiable credential can be in during its lifecycle. */
+export enum CredentialState {
+  /** Credential has been drafted but not yet issued. */
+  Draft = "draft",
+  /** Credential has been issued and is active. */
+  Issued = "issued",
+  /** Credential is active and verified. */
+  Active = "active",
+  /** Credential has been suspended temporarily. */
+  Suspended = "suspended",
+  /** Credential has been permanently revoked. */
+  Revoked = "revoked",
+  /** Credential has expired. */
+  Expired = "expired",
 }
 
-/** Represents a currency in the GPPN network. */
-export interface Currency {
-  /** ISO 4217 code or token symbol (e.g. "USD", "BTC"). */
-  code: string;
-  /** Number of decimal places for the currency. */
-  decimals: number;
+/** Supported credential types in the Veritas network. */
+export enum CredentialType {
+  KycBasic = "KycBasic",
+  KycEnhanced = "KycEnhanced",
+  AgeVerification = "AgeVerification",
+  Residency = "Residency",
+  HumanityProof = "HumanityProof",
+  Custom = "Custom",
 }
 
-/** Represents a monetary amount with its currency. */
-export interface Amount {
-  /** The numeric value as a string to avoid floating-point issues. */
-  value: string;
-  /** The currency of this amount. */
-  currency: Currency;
+/** Supported proof types for zero-knowledge proofs. */
+export enum ProofType {
+  AgeProof = "age",
+  ResidencyProof = "residency",
+  KycLevelProof = "kyc_level",
+  HumanityProof = "humanity",
 }
 
-/** A payment message exchanged between nodes. */
-export interface PaymentMessage {
-  /** Unique identifier for the payment. */
+/** A single claim within a verifiable credential. */
+export interface Claim {
+  /** The name of the claim (e.g. "date_of_birth", "country"). */
+  name: string;
+  /** The value of the claim. */
+  value: string | number | boolean;
+}
+
+/** A verifiable credential issued to a subject. */
+export interface VerifiableCredential {
+  /** Unique identifier for the credential. */
   id: string;
-  /** Public key of the sender. */
-  sender: string;
-  /** Public key of the recipient. */
-  recipient: string;
-  /** The amount being transferred. */
-  amount: Amount;
-  /** Current state of the payment. */
-  state: PaymentState;
-  /** Optional memo or description. */
-  memo?: string;
-  /** Timestamp of payment creation (ISO 8601). */
+  /** DID of the issuer. */
+  issuer: string;
+  /** DID of the subject (credential holder). */
+  subject: string;
+  /** The type(s) of this credential. */
+  credentialType: string[];
+  /** Claims contained in this credential. */
+  claims: Record<string, string | number | boolean>;
+  /** Current state of the credential. */
+  state: CredentialState;
+  /** Issuance timestamp (ISO 8601). */
+  issuedAt: string;
+  /** Expiration timestamp (ISO 8601), if applicable. */
+  expiresAt?: string;
+  /** Cryptographic proof of the credential. */
+  proof?: CredentialProof;
+}
+
+/** Cryptographic proof attached to a credential. */
+export interface CredentialProof {
+  /** The type of proof (e.g. "Ed25519Signature2020"). */
+  type: string;
+  /** When the proof was created (ISO 8601). */
+  created: string;
+  /** DID of the verification method used. */
+  verificationMethod: string;
+  /** The proof value (signature bytes as hex). */
+  proofValue: string;
+}
+
+/** A verifiable presentation containing one or more credentials. */
+export interface VerifiablePresentation {
+  /** Unique identifier for the presentation. */
+  id: string;
+  /** DID of the holder presenting credentials. */
+  holder: string;
+  /** The credentials being presented. */
+  credentials: VerifiableCredential[];
+  /** When the presentation was created (ISO 8601). */
   createdAt: string;
-  /** Timestamp of the last update (ISO 8601). */
-  updatedAt: string;
+  /** Cryptographic proof of the presentation. */
+  proof?: CredentialProof;
 }
 
-/** A single hop in a payment route. */
-export interface RouteEntry {
-  /** Public key of the node at this hop. */
-  nodeId: string;
-  /** Fee charged by this node for forwarding. */
-  fee: Amount;
-  /** Estimated latency in milliseconds for this hop. */
-  latencyMs: number;
+/** A zero-knowledge proof response. */
+export interface ZkProof {
+  /** The type of proof (age, residency, kyc_level, etc.). */
+  proofType: string;
+  /** Whether the proof is valid. */
+  valid: boolean;
+  /** The commitment hash. */
+  commitment: string;
+  /** The challenge value. */
+  challenge: string;
+  /** The response value. */
+  response: string;
+  /** When the proof was generated (ISO 8601). */
+  generatedAt: string;
 }
 
-/** A complete route through the network for a payment. */
-export interface Route {
-  /** Ordered list of hops from sender to recipient. */
-  entries: RouteEntry[];
-  /** Total fee for the entire route. */
-  totalFee: Amount;
-  /** Estimated total latency in milliseconds. */
-  totalLatencyMs: number;
-  /** A score indicating route quality (higher is better). */
-  score: number;
+/** A request for a zero-knowledge proof. */
+export interface ProofRequest {
+  /** Unique identifier for the proof request. */
+  id: string;
+  /** DID of the verifier requesting the proof. */
+  verifier: string;
+  /** The type of proof requested. */
+  proofType: ProofType;
+  /** Parameters for the proof (e.g. min_age, allowed_countries). */
+  params: Record<string, string | number | string[]>;
+  /** When the request was created (ISO 8601). */
+  createdAt: string;
 }
 
 /** Trust score for a peer in the network. */
 export interface TrustScore {
-  /** Public key of the peer. */
-  peerId: string;
+  /** DID of the peer. */
+  did: string;
   /** Numeric trust score between 0.0 and 1.0. */
   score: number;
-  /** Number of successful interactions. */
+  /** Number of successful verifications. */
   successCount: number;
-  /** Number of failed interactions. */
+  /** Number of failed verifications. */
   failureCount: number;
   /** Timestamp of last update (ISO 8601). */
   lastUpdated: string;
@@ -92,22 +138,26 @@ export interface TrustScore {
 
 /** Information about a peer node in the network. */
 export interface PeerInfo {
-  /** Public key of the peer. */
+  /** DID of the peer. */
+  did: string;
+  /** Peer ID in the libp2p network. */
   peerId: string;
   /** Network address of the peer. */
   address: string;
   /** Whether the peer is currently connected. */
   connected: boolean;
   /** Trust score for this peer. */
-  trustScore: TrustScore;
+  trustScore?: TrustScore;
   /** Timestamp of last seen activity (ISO 8601). */
   lastSeen: string;
 }
 
-/** Status of the local GPPN node. */
+/** Status of the local Veritas node. */
 export interface NodeStatus {
-  /** Public key of this node. */
-  nodeId: string;
+  /** DID of this node. */
+  did: string;
+  /** Peer ID in the libp2p network. */
+  peerId: string;
   /** Whether the node is currently connected to the network. */
   connected: boolean;
   /** Number of connected peers. */
@@ -118,18 +168,32 @@ export interface NodeStatus {
   uptimeSeconds: number;
 }
 
-/** Status of a settlement operation. */
-export interface SettlementStatus {
-  /** The payment ID being settled. */
-  paymentId: string;
-  /** Current state of the settlement. */
-  state: PaymentState;
-  /** Number of confirmations received. */
-  confirmations: number;
-  /** Number of confirmations required. */
-  requiredConfirmations: number;
-  /** Timestamp of settlement initiation (ISO 8601). */
-  initiatedAt: string;
-  /** Timestamp of settlement completion, if completed (ISO 8601). */
-  completedAt?: string;
+/** A credential schema defining allowed claims. */
+export interface CredentialSchema {
+  /** Unique identifier for the schema. */
+  id: string;
+  /** Human-readable name. */
+  name: string;
+  /** Schema version. */
+  version: string;
+  /** Allowed claim names. */
+  claims: string[];
+}
+
+/** Result of a credential verification. */
+export interface VerificationResult {
+  /** Whether the credential is valid overall. */
+  valid: boolean;
+  /** Individual check results. */
+  checks: VerificationCheck[];
+}
+
+/** A single verification check result. */
+export interface VerificationCheck {
+  /** Name of the check (e.g. "signature", "expiration", "issuer_trust"). */
+  name: string;
+  /** Whether this check passed. */
+  passed: boolean;
+  /** Details about the check result. */
+  detail: string;
 }

@@ -8,15 +8,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gppn-protocol/gppn/services/gateway/handlers"
-	"github.com/gppn-protocol/gppn/services/gateway/middleware"
+	"github.com/veritas-protocol/veritas/services/gateway/handlers"
+	"github.com/veritas-protocol/veritas/services/gateway/middleware"
 )
 
 const defaultPort = 8081
 
 func main() {
 	port := defaultPort
-	if p := os.Getenv("GPPN_PORT"); p != "" {
+	if p := os.Getenv("VERITAS_PORT"); p != "" {
 		fmt.Sscanf(p, "%d", &port)
 	}
 
@@ -26,8 +26,10 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Protected endpoints (require API key).
-	mux.Handle("/api/v1/send", auth.AuthenticateFunc(gatewayHandler.HandleSendPayment))
-	mux.Handle("/api/v1/status/", auth.AuthenticateFunc(gatewayHandler.HandleGetStatus))
+	mux.Handle("/api/v1/credentials/issue", auth.AuthenticateFunc(gatewayHandler.HandleIssueCredential))
+	mux.Handle("/api/v1/credentials/verify", auth.AuthenticateFunc(gatewayHandler.HandleVerifyCredential))
+	mux.Handle("/api/v1/proofs/generate", auth.AuthenticateFunc(gatewayHandler.HandleGenerateProof))
+	mux.Handle("/api/v1/identity/", auth.AuthenticateFunc(gatewayHandler.HandleResolve))
 
 	// Health check endpoint (no auth required).
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -42,12 +44,13 @@ func main() {
 		Handler: mux,
 	}
 
-	// Start server in a goroutine.
 	go func() {
-		log.Printf("GPPN Gateway starting on %s", addr)
+		log.Printf("Veritas Gateway starting on %s", addr)
 		log.Printf("Endpoints:")
-		log.Printf("  POST /api/v1/send       (requires API key)")
-		log.Printf("  GET  /api/v1/status/{id} (requires API key)")
+		log.Printf("  POST /api/v1/credentials/issue   (requires API key)")
+		log.Printf("  POST /api/v1/credentials/verify  (requires API key)")
+		log.Printf("  POST /api/v1/proofs/generate     (requires API key)")
+		log.Printf("  GET  /api/v1/identity/:did       (requires API key)")
 		log.Printf("  GET  /health")
 		log.Printf("Auth: X-API-Key header or Authorization: Bearer <key>")
 
@@ -56,12 +59,11 @@ func main() {
 		}
 	}()
 
-	// Wait for shutdown signal.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	sig := <-sigCh
 	log.Printf("Received signal %v, shutting down...", sig)
 	server.Close()
-	log.Println("GPPN Gateway stopped")
+	log.Println("Veritas Gateway stopped")
 }

@@ -1,47 +1,45 @@
-# GPPN — Global Payment Protocol Network
+# Veritas — Decentralized Identity Protocol
 
-[![CI](https://github.com/gppn-protocol/gppn/actions/workflows/ci.yml/badge.svg)](https://github.com/gppn-protocol/gppn/actions/workflows/ci.yml)
+[![CI](https://github.com/veritas-protocol/veritas/actions/workflows/ci.yml/badge.svg)](https://github.com/veritas-protocol/veritas/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-> The universal language of money — a decentralized protocol for payment routing, messaging, and settlement.
+> AI-resistant proof of humanity — a decentralized protocol for verifiable credentials, zero-knowledge proofs, and trust scoring.
 
-GPPN is a peer-to-peer protocol that enables universal payment interoperability across currencies, networks, and borders. Think of it as **TCP/IP for payments**: any payment system can connect, route through, and settle via the GPPN network.
+Veritas is a peer-to-peer protocol that enables decentralized identity verification with privacy-preserving proofs. Issue verifiable credentials, prove attributes without revealing data, and build trust networks — all without centralized authorities.
 
 ## Architecture
 
-GPPN is organized into 5 protocol layers:
+Veritas is organized into 4 protocol layers:
 
 | Layer | Name | Purpose |
 |-------|------|---------|
-| **PML** | Payment Message Layer | Standardized payment messages with 8-state FSM |
-| **SRL** | Smart Routing Layer | Distributed routing table + multi-path discovery |
-| **SAL** | Settlement Abstraction Layer | Pluggable adapters (Ethereum, Bitcoin, stablecoins) |
-| **TIL** | Trust & Identity Layer | DIDs, verifiable credentials, EigenTrust scoring |
+| **VCL** | Verifiable Credential Layer | Credential issuance, holder wallet, verifier checks |
+| **ZPL** | Zero-Knowledge Proof Layer | BLAKE3 commitment proofs (age, residency, KYC level) |
+| **TIL** | Trust & Identity Layer | DIDs, DID documents, trust graph, humanity verification |
 | **OGL** | Overlay & Gossip Layer | libp2p networking, gossipsub, Kademlia DHT |
 
 ## Project Structure
 
 ```
-├── crates/                   # Rust workspace (8 crates)
-│   ├── gppn-core/            # Payment messages, state machine, types
-│   ├── gppn-crypto/          # Ed25519, X25519, ChaCha20, BLAKE3
-│   ├── gppn-network/         # libp2p node, gossipsub, Kademlia
-│   ├── gppn-routing/         # Distributed routing table, pathfinder
-│   ├── gppn-settlement/      # HTLC engine, settlement adapters
-│   ├── gppn-identity/        # DIDs, trust graph, credentials
-│   ├── gppn-node/            # Full node binary
-│   └── gppn-cli/             # CLI tool
-├── services/                 # Go microservices
-│   ├── sa-ethereum/          # Ethereum settlement adapter
-│   ├── sa-bitcoin/           # Bitcoin settlement adapter
-│   ├── sa-stablecoin/        # USDC/USDT settlement adapter
-│   ├── explorer-api/         # Network explorer REST API
-│   └── gateway/              # HTTP gateway for SDK clients
-├── sdks/typescript/          # TypeScript SDK (@gppn/sdk)
-├── proto/gppn/v1/            # Protobuf schemas (source of truth)
-├── infra/docker/             # Dockerfiles + docker-compose
-├── spec/                     # Protocol specification + GIPs
-└── docs/                     # Documentation
+├── crates/                     # Rust workspace (8 crates)
+│   ├── veritas-core/           # Credential types, state machine, config
+│   ├── veritas-crypto/         # Ed25519, BLAKE3, ZKP commitments, selective disclosure
+│   ├── veritas-network/        # libp2p node, gossipsub, Kademlia
+│   ├── veritas-credentials/    # Issuer, holder wallet, verifier, schemas
+│   ├── veritas-proof/          # Age, residency, KYC level, humanity proofs
+│   ├── veritas-identity/       # DIDs, trust graph, humanity verification
+│   ├── veritas-node/           # Full node binary
+│   └── veritas-cli/            # CLI tool
+├── services/                   # Go microservices
+│   ├── issuer-api/             # Credential issuance API
+│   ├── verifier-api/           # Credential verification API
+│   ├── registry-api/           # DID + schema registry
+│   └── gateway/                # HTTP gateway for SDK clients
+├── sdks/typescript/            # TypeScript SDK (@veritas/sdk)
+├── proto/veritas/v1/           # Protobuf schemas
+├── infra/docker/               # Dockerfiles + docker-compose
+├── spec/                       # Protocol specification + VIPs
+└── docs/                       # Documentation
 ```
 
 ## Quick Start
@@ -70,51 +68,49 @@ cd sdks/typescript && npm install && npm run build
 ### Run Tests
 
 ```bash
-# Rust (292 tests)
+# Rust (315+ tests)
 cargo test --workspace
 
-# Go services (31 tests)
-cd services/sa-ethereum && go test ./...
-cd services/sa-bitcoin && go test ./...
-cd services/sa-stablecoin && go test ./...
-
-# TypeScript SDK (34 tests)
+# TypeScript SDK (55 tests)
 cd sdks/typescript && npm test
 ```
 
 ### Start a Local Testnet
 
 ```bash
-# Spin up 3 GPPN nodes + PostgreSQL + DragonflyDB
+# Spin up 3 Veritas nodes + registry-api + PostgreSQL + DragonflyDB
 docker compose -f infra/docker/docker-compose.yml up -d
 
 # Initialize a node
-cargo run -p gppn-cli -- init --data-dir ./node-data
+cargo run -p veritas-cli -- init --data-dir ./node-data
 
 # Start a node
-cargo run -p gppn-cli -- start --data-dir ./node-data
+cargo run -p veritas-cli -- start --data-dir ./node-data
 
 # Check node status
-cargo run -p gppn-cli -- status --api-url http://localhost:9001
+cargo run -p veritas-cli -- status --api-url http://localhost:9001
 ```
 
 ### TypeScript SDK Usage
 
 ```typescript
-import { GppnClient } from "@gppn/sdk";
+import { VeritasClient } from "@veritas/sdk";
 
-const client = new GppnClient({ url: "http://localhost:9000" });
+const client = new VeritasClient({ url: "http://localhost:9001" });
 await client.connect();
 await client.createIdentity();
 
-const payment = await client.sendPayment(
-  "did:gppn:key:recipient",
-  "50.00",
-  { code: "USD", decimals: 2 },
-  "Coffee payment"
+// Issue a credential
+const credential = await client.issueCredential(
+  "did:veritas:key:subject_pubkey",
+  ["KycBasic"],
+  { full_name: "Alice Smith", country: "US", kyc_level: 2 }
 );
 
-console.log(`Payment ${payment.id}: ${payment.status}`);
+// Request an age proof
+const proofRequest = await client.requestAgeProof(18);
+
+console.log(`Credential ${credential.id}: ${credential.state}`);
 ```
 
 ## Documentation
@@ -123,18 +119,8 @@ console.log(`Payment ${payment.id}: ${payment.status}`);
 - [Getting Started Guide](docs/getting-started.md)
 - [SDK Integration Guide](docs/sdk-integration.md)
 - [Node Operator Guide](docs/node-operator.md)
-- [Protocol Specification](spec/GPPN-SPEC-v1.md)
-- [GIP-0001: Protocol v1](spec/gips/GIP-0001-protocol-v1.md)
-
-## Protocol Specification
-
-See [spec/GPPN-SPEC-v1.md](spec/GPPN-SPEC-v1.md) for the full protocol specification, including:
-
-- Payment message format and lifecycle
-- Routing algorithm (modified Dijkstra + Yen's k-shortest paths)
-- Settlement abstraction and HTLC mechanics
-- DID-based identity and trust scoring
-- Network topology and gossip protocol
+- [Protocol Specification](spec/VERITAS-SPEC-v1.md)
+- [VIP-0001: Protocol v1](spec/vips/VIP-0001-protocol-v1.md)
 
 ## Contributing
 

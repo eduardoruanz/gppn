@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== GPPN Development Environment Setup ==="
+echo "=== Veritas Development Environment Setup ==="
 
 # Check for Rust
 if ! command -v rustc &> /dev/null; then
@@ -37,7 +37,7 @@ rustup component add clippy rustfmt
 
 # Build the workspace
 echo ""
-echo "=== Building GPPN workspace ==="
+echo "=== Building Veritas workspace ==="
 cargo build --workspace
 
 # Run tests

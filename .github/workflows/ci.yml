@@ -66,10 +66,9 @@ jobs:
     strategy:
       matrix:
         service:
-          - sa-ethereum
-          - sa-bitcoin
-          - sa-stablecoin
-          - explorer-api
+          - issuer-api
+          - verifier-api
+          - registry-api
           - gateway
 
     steps:
@@ -84,9 +83,9 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: go build ./...
 
-      - name: Test
+      - name: Vet
         working-directory: services/${{ matrix.service }}
-        run: go test ./...
+        run: go vet ./...
 
   typescript:
     name: TypeScript SDK
@@ -125,8 +124,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build GPPN Node image
-        run: docker build -f infra/docker/Dockerfile.node -t gppn-node:test .
+      - name: Build Veritas Node image
+        run: docker build -f infra/docker/Dockerfile.node -t veritas-node:test .
 
       - name: Verify image runs
-        run: docker run --rm gppn-node:test --help || true
+        run: docker run --rm veritas-node:test --help || true

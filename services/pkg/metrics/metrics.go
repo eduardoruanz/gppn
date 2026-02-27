@@ -1,5 +1,5 @@
 // Package metrics provides a simple Prometheus-compatible metrics endpoint
-// placeholder for GPPN services.
+// placeholder for Veritas services.
 package metrics
 
 import (
